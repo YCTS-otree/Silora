@@ -24,6 +24,9 @@ try {
                 renderAttachments(fake); $('prompt').value = text;
                 const done = $('send').onclick();
                 assert(attachedImages.length === 0 && $('attachment').hidden, 'immediate clear: ' + (text || 'image only'));
+                assert(!$('ai-progress').hidden && $('ai-progress').classList.contains('working'), 'immediate visible sending feedback');
+                window.aiProgress('waiting');
+                assert($('ai-progress').textContent.includes('消息已发出'), 'native progress shows request sent');
                 assert($('image-pick').disabled, 'no attachment changes during request');
                 resolveSend({document:{status:'clarification_required',question:'测试追问'},images:[]});
                 await done;
@@ -34,6 +37,17 @@ try {
             renderAttachments(fake); $('prompt').value = '';
             const done = $('send').onclick(); rejectSend(Error('模拟失败 / 取消')); await done;
             assert(attachedImages.length === 1 && !$('attachment').hidden, 'failure restores pending image');
+            assert($('ai-progress').classList.contains('failed'), 'failure remains visible');
+            renderAttachments([]);
+            let localApplies = 0;
+            state = {...state, proposal:{id:'smoke-proposal'}};
+            native = async(action,data) => {
+                if(action === 'proposal_apply') { localApplies++; return {...state,proposal:null}; }
+                if(action === 'ai_chat') throw Error('Confirmation must not call AI');
+                return originalNative(action,data);
+            };
+            $('prompt').value = '是'; await $('send').onclick();
+            assert(localApplies === 1, 'yes confirms the current proposal locally without another AI turn');
         } finally {
             native = originalNative; state = originalState; renderAttachments([]);
             $('prompt').value = originalPrompt; $('messages').replaceChildren(...children);

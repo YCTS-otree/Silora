@@ -1,5 +1,17 @@
 # Silora 1.2.0 课表与本地规则协议
 
+## v1.3.0 对话扩展
+
+协议仍为 schema_version 1。所有模型结果可带 summary、assumptions 和 image_context，分别用于自然语言摘要、可核对的推断及完整图片事实摘要。新增 review_required 状态：第 4 轮仍无法可靠生成时展示具体缺口，不再泛泛追问。
+
+plan_ready / recurrence_ready / script_ready 可在根对象包含 restore（previous / ring / vibrate / keep）。本版是全局结束恢复策略；不支持各个时段使用不同恢复策略。兼容模型误把同一 restore 放进所有 intervals 条目，但遇到不一致值直接拒绝。
+
+模型结果经校验暂存为 proposal（UUID、document、candidate、revision、periodVersion、restoreBefore），不会立即激活。`proposal_apply {proposalId}` 对版本及策略再次核对后，在同一事务保存计划、可选课时表、周期元数据、恢复策略并清除候选。`proposal_clear` 仅丢弃候选。文本“是”和界面确认按钮调用相同的本地接口，不再向模型发确认请求。
+
+AI 请求期间，桥接回复会发送 `{requestId, progress}`，progress 为 preparing / sending / waiting / receiving / validating；中间进度不结算请求 Promise。waiting 只在请求体传输结束后发出，receiving 表示已收到成功响应头并等待完整正文，不代表思考已经结束。
+
+对话图片以应用生成的 ID 存入私有目录，历史消息用 image_ids 引用；发送给模型时恢复为图文 content blocks。最多保留近期 6 张 / 16 MB，清除对话时删除。image_ids 不直接提交给模型，也不能引用任意本地路径。旧版本已释放且没有引用的图片无法自动恢复，需要重新选图；本轮用户两张原图已用于真机回归。
+
 沿用 `schema_version: 1`，增加 `period_table_ready`、`recurrence_ready` 和 `script_ready` 状态。完整字段见 `plan.schema.json` 与实际使用的 `app/src/main/assets/system-prompt.txt`；Kotlin 校验器是最终依据。
 
 ## 课时表

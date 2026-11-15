@@ -102,12 +102,15 @@ class Core private constructor(private val context: Context) {
         .put("activeId",store.state().activeId).put("suppressed",store.state().suppressed)
         .put("issue",store.get("issue")).put("restore",store.get("restore","previous"))
         .put("manual",store.get("manual","respect")).put("zone",ZoneId.systemDefault().id)
-        .put("events",store.events()).put("version","1.2.1").put("apiConfigured",KeyVault(context).configured())
+        .put("events",store.events()).put("version","1.3.0").put("apiConfigured",KeyVault(context).configured())
         .put("reasoningEffort", AiConfig.effort(context))
         .put("periodTable", store.get("periodTable").takeIf { it.isNotBlank() }?.let { JSONObject(it) })
         .put("periodVersion", store.get("periodVersion", "0").toLong())
         .put("automation", store.get("automation").takeIf { it.isNotBlank() }?.let { JSONObject(it) })
         .put("reminder", reminders.snapshot())
+        .put("proposal", proposals().current())
+
+    fun proposals() = ProposalStore(store, ::prepareAutomation)
 
     fun prepareAutomation(document: JSONObject): Pair<JSONObject, List<Plan>> {
         val previous = store.get("automation").takeIf { it.isNotBlank() }?.let { JSONObject(it) }
@@ -129,6 +132,11 @@ class Core private constructor(private val context: Context) {
 
     fun command(o: JSONObject): JSONObject {
         when(o.getString("action")) {
+            "proposal_apply" -> {
+                proposals().apply(o.getString("proposalId"))
+                reconcile("确认 AI 方案")
+            }
+            "proposal_clear" -> proposals().clear()
             "period_save" -> store.saveTable(o.getJSONObject("table"), o.getLong("periodVersion"))
             "period_clear" -> store.saveTable(null, o.getLong("periodVersion"))
             "automation_preview" -> {

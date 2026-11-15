@@ -5,8 +5,8 @@ const localTime=d=>`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinute
 const today=()=>localDate(new Date());
 let plans=[],state=null,tab='ai',filter='all',timer,editing=null,busy=false,importRevision=null;
 const pending=new Map();let seq=0;
-function native(action,data={}){return new Promise((resolve,reject)=>{if(!window.Silora){reject(Error('系统 WebView 不支持安全原生通信，请更新 WebView'));return;}const requestId=String(++seq),timeout=setTimeout(()=>{pending.delete(requestId);reject(Error('操作超时，请刷新确认结果，勿重复提交'));},action==='ai_chat'?270000:90000);pending.set(requestId,{resolve,reject,timeout});window.Silora.postMessage(JSON.stringify({requestId,action,...data}));});}
-if(window.Silora)window.Silora.onmessage=e=>{const r=JSON.parse(e.data),p=pending.get(r.requestId);if(!p)return;clearTimeout(p.timeout);pending.delete(r.requestId);if(r.ok)p.resolve(r.data);else p.reject(Error(r.error));};
+function native(action,data={}){return new Promise((resolve,reject)=>{if(!window.Silora){reject(Error('系统 WebView 不支持安全原生通信，请更新 WebView'));return;}const requestId=String(++seq),timeout=setTimeout(()=>{pending.delete(requestId);reject(Error('操作超时，请刷新确认结果，勿重复提交'));},action==='ai_chat'?270000:90000);pending.set(requestId,{resolve,reject,timeout,action});window.Silora.postMessage(JSON.stringify({requestId,action,...data}));});}
+if(window.Silora)window.Silora.onmessage=e=>{const r=JSON.parse(e.data),p=pending.get(r.requestId);if(!p)return;if(r.progress){if(p.action==='ai_chat')window.aiProgress?.(r.progress);return;}clearTimeout(p.timeout);pending.delete(r.requestId);if(r.ok)p.resolve(r.data);else p.reject(Error(r.error));};
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(timer);timer=setTimeout(()=>$('toast').hidden=true,4000);}
 window.nativeUpdate=s=>{state=s;plans=s.plans;render();renderStatus();};
 async function refresh(){try{nativeUpdate(await native('status'));}catch(e){$('native-status').textContent=e.message;}}

@@ -64,7 +64,11 @@ class MainActivity : Activity() {
                             catch(e:Exception) { DeepSeek.busy.set(false);imageReply=null;throw IllegalStateException("系统文件选择器不可用") }
                         } else DeepSeek.executor.execute {
                             val response=JSONObject().put("requestId",requestId)
-                            try { response.put("ok",true).put("data",DeepSeek.get(this).command(request)) }
+                            try { response.put("ok",true).put("data",DeepSeek.get(this).command(request) { phase ->
+                                if(action == "ai_chat") runOnUiThread {
+                                    if(!isDestroyed) reply.postMessage(JSONObject().put("requestId",requestId).put("progress",phase).toString())
+                                }
+                            }) }
                             catch(e:Exception) { response.put("ok",false).put("error",e.cause?.message ?: e.message ?: "AI 操作失败") }
                             finally { DeepSeek.busy.set(false) }
                             runOnUiThread { if(!isDestroyed)reply.postMessage(response.toString()) }
