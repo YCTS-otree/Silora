@@ -73,6 +73,9 @@ class MainActivity : Activity() {
                             finally { DeepSeek.busy.set(false) }
                             runOnUiThread { if(!isDestroyed)reply.postMessage(response.toString()) }
                         }
+                    } else if(action=="open_api_help") {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://api-docs.deepseek.com/zh-cn/")).addCategory(Intent.CATEGORY_BROWSABLE))
+                        reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
                     } else if(action=="permission") {
                         permissionGuide.open(request.getString("permission"))
                         reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())

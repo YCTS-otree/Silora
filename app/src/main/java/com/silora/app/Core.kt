@@ -102,7 +102,8 @@ class Core private constructor(private val context: Context) {
         .put("activeId",store.state().activeId).put("suppressed",store.state().suppressed)
         .put("issue",store.get("issue")).put("restore",store.get("restore","previous"))
         .put("manual",store.get("manual","respect")).put("zone",ZoneId.systemDefault().id)
-        .put("events",store.events()).put("version","1.3.1").put("apiConfigured",KeyVault(context).configured())
+        .put("events",store.events()).put("version","1.4.0").put("apiConfigured",KeyVault(context).configured())
+        .put("tutorial", TutorialState(context).snapshot())
         .put("reasoningEffort", AiConfig.effort(context))
         .put("periodTable", store.get("periodTable").takeIf { it.isNotBlank() }?.let { JSONObject(it) })
         .put("periodVersion", store.get("periodVersion", "0").toLong())
@@ -132,6 +133,7 @@ class Core private constructor(private val context: Context) {
 
     fun command(o: JSONObject): JSONObject {
         when(o.getString("action")) {
+            "tutorial_save" -> TutorialState(context).save(o)
             "proposal_apply" -> {
                 proposals().apply(o.getString("proposalId"))
                 reconcile("确认 AI 方案")
