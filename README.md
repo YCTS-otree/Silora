@@ -1,6 +1,6 @@
 # Silora · 静律
 
-**v1.2.0**：多图片、保存课时表、单双周计划、本地条件脚本与白天到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
+**v1.2.1**：多图片、保存课时表、单双周计划、本地条件脚本与白天到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
 
 ## 已实现
 
@@ -13,9 +13,15 @@
 - 精确闹钟、通知策略访问的状态显示和系统设置入口；未获权限时明确显示不可用。
 - DeepSeek `deepseek-flash`：免费余额接口验证 Key、文字与系统文件选择器图片输入、多轮追问、JSON 候选计划、确认后保存、Token 用量、取消请求及错误分类。
 - 密钥由 Android Keystore AES-GCM 加密；网络只在 Kotlin 层使用 OkHttp 访问固定 DeepSeek HTTPS 地址，禁用重定向。AI 线程独立于调度线程。
-- 本地对话保留最近 12 条消息，图片仅保留于进程内存中供追问，移除 / 清理 / 进程结束后释放。PNG 处理最长边 2560 像素、每张最多 8 MB；最多 6 张、合计最多 16 MB，保留文字清晰度；大图建议裁剪。
+- 本地对话保留最近 12 条消息，待发图片仅保留于进程内存。点击发送立即清空输入框附件，成功后释放原生图片；失败或取消恢复待发附件，后续需重新添加图片。PNG 处理最长边 2560 像素、每张最多 8 MB；最多 6 张、合计最多 16 MB，保留文字清晰度；大图建议裁剪。
 
 首次从上传图片识别出的有效课时表会自动保存；已有课时表的覆盖需确认。候选铃声计划必须经过原生校验及明确确认。旧版 Demo 的 localStorage 演示记录不会自动迁移为可执行计划。
+
+## AI 思考设置
+
+设置 → DeepSeek API → 思考强度，可选 low、high、max，默认 high，原生请求始终携带 `thinking.type=enabled`。不提供关闭选项；设置独立持久化，清除对话不重置。参数依照 [DeepSeek 官方说明](https://api-docs.deepseek.com/guides/thinking_mode/)。
+
+给思考及最终 JSON 共预留最多 32768 输出 token，网络总超时 240 秒、前端等待 270 秒，仍可主动取消。高强度可能增加时间和用量，实际消耗以返回 usage 为准，不显示或保存模型思考正文。
 
 ## 课表、脚本与到期提醒
 
@@ -34,7 +40,7 @@
 
 ```powershell
 .\gradlew.bat --project-cache-dir Temp/gradle-project :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-adb install -r Release/v1.2.0/Silora-v1.2.0-debug.apk
+adb install -r Release/v1.2.1/Silora-v1.2.1-debug.apk
 adb shell am start -n com.silora.app/.MainActivity
 ```
 
@@ -50,7 +56,16 @@ adb shell am start -n com.silora.app/.MainActivity
 
 删除 Key 不影响已保存计划。密钥不会打包进 APK；不要提交 `.key`、签名库或凭据。Debug APK 支持 WebView 调试，仅在可信开发设备使用。
 
-## 验证记录（2026-11-15）
+## v1.2.1 验证（2026-11-15）
+
+- 原 29 项 JVM 测试通过，构建和 Lint 通过（0 错误、6 提示）。
+- Android 仪器检查三档实际请求体始终启用思考，并拒绝 none / disabled / medium / 空值。
+- 真机 WebView 检查三档保存、关闭思考被拒绝、纯图片 / 带文字图片立即移除、成功保持空附件、模拟失败恢复附件；更新重开后保留设置。
+- 实际 high 档纯图片 DeepSeek 请求返回有效追问及 reasoning_tokens 用量，随后界面与原生附件均为 0；设置界面实际屏幕检查无水平溢出。测试未新增计划。
+
+复测输入框可在已有 WebView 调试转发后执行 `node tests/ai-composer-smoke.mjs`（使用模拟回复，不收费；要求无待发图片）。请求体仪器检查通过 `-PtestRunner=com.silora.app.AiConfigChecks` 构建并运行同名 instrumentation。
+
+## v1.2.0 及此前验证记录（2026-11-15）
 
 设备：CET-AL00，Android 12 / API 31。
 
@@ -114,4 +129,4 @@ Android 12+ 需要精确闹钟授权，Android 14 新装应用常默认无此授
 
 外部修改检测依赖实际模式与应用预期模式比较。进程不在时无法持续检测，更不能可靠识别是谁改的；若模式改动后又回到相同值，可能无法观察到。AI 网络失败不会影响已保存计划。网络失败不自动重发收费请求，避免重复消耗，可手动重试。
 
-APK 大小通过 `Get-Item Release/v1.2.0/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。
+APK 大小通过 `Get-Item Release/v1.2.1/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。

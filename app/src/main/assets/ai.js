@@ -5,6 +5,7 @@ const updateCore = window.nativeUpdate;
 window.nativeUpdate = s => {
     updateCore(s);
     $('api-status').textContent = s.apiConfigured ? 'DeepSeek Key 已加密配置' : '尚未配置 DeepSeek Key';
+    if (document.activeElement !== $('reasoning-effort')) $('reasoning-effort').value = s.reasoningEffort;
 };
 
 function renderAttachments(images) {
@@ -56,6 +57,16 @@ $('key-test').onclick = async () => {
     try { const r = await native('ai_test'); toast(r.available ? '连接成功，余额可用' : '认证成功，但余额不足'); }
     catch (e) { toast(e.message); }
 };
+$('reasoning-save').onclick = async () => {
+    const button = $('reasoning-save');
+    button.disabled = true;
+    try {
+        await native('ai_settings', { effort: $('reasoning-effort').value });
+        await refresh();
+        toast('思考强度已保存，下次发送生效');
+    } catch (e) { toast(e.message); }
+    finally { button.disabled = false; }
+};
 $('key-delete').onclick = async () => {
     if (!confirm('删除 API Key？已确认的计划仍会继续执行。')) return;
     try { await native('ai_delete'); await refresh(); toast('已删除 Key'); }
@@ -90,11 +101,17 @@ $('send').onclick = async () => {
     if (!state?.apiConfigured) { toast('请先到设置中配置 API Key'); switchTab('settings'); return; }
     const text = $('prompt').value.trim();
     if (!text && !attachedImages.length) return;
+    const sentImages = attachedImages.slice();
+    let delivered = false;
     aiBusy = true; $('send').disabled = true; $('ai-cancel').hidden = false;
+    for (const id of ['image-pick', 'image-remove', 'chat-clear', 'reasoning-save']) $(id).disabled = true;
     message((text || '请读取这些安排截图。') + (attachedImages.length ? `\n附 ${attachedImages.length} 张图片` : ''), 'user');
     $('prompt').value = '';
+    renderAttachments([]);
     try {
         const r = await native('ai_chat', { text });
+        delivered = true;
+        renderAttachments(r.images || []);
         const d = r.document;
         await refresh();
         tableFeedback(r);
@@ -116,6 +133,12 @@ $('send').onclick = async () => {
         }
         if (r.usage?.total_tokens) message(`本次用量：${r.usage.total_tokens} tokens`, 'assistant');
         $('messages').lastChild?.scrollIntoView({ block: 'center' });
-    } catch (e) { message(e.message + '；未新增或修改任何铃声计划。', 'assistant'); }
-    finally { aiBusy = false; $('send').disabled = false; $('ai-cancel').hidden = true; }
+    } catch (e) {
+        if (!delivered) renderAttachments(sentImages);
+        message(e.message + '；未新增或修改任何铃声计划。', 'assistant');
+    }
+    finally {
+        aiBusy = false; $('send').disabled = false; $('ai-cancel').hidden = true;
+        for (const id of ['image-pick', 'image-remove', 'chat-clear', 'reasoning-save']) $(id).disabled = false;
+    }
 };

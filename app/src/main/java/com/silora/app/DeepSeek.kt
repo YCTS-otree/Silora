@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class DeepSeek private constructor(private val context: Context) {
     private val vault=KeyVault(context)
     private val prefs=context.getSharedPreferences("conversation",Context.MODE_PRIVATE)
-    private val client=OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(70,TimeUnit.SECONDS)
-        .callTimeout(80,TimeUnit.SECONDS).followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).build()
+    private val client=OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(180,TimeUnit.SECONDS)
+        .callTimeout(240,TimeUnit.SECONDS).followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).build()
     @Volatile private var call:Call?=null
     @Volatile private var cancelled=false
     private data class Attachment(val id: String, val bytes: ByteArray, val preview: String)
@@ -85,6 +85,10 @@ class DeepSeek private constructor(private val context: Context) {
     fun command(o:JSONObject):JSONObject {
         return when(o.getString("action")) {
             "ai_history" -> JSONObject().put("messages",history()).put("images", attachments())
+            "ai_settings" -> {
+                AiConfig.save(context, o.getString("effort"))
+                JSONObject().put("effort", AiConfig.effort(context))
+            }
             "ai_key" -> {
                 val key=o.getString("key").trim();require(key.length in 8..512 && key.none { it.isWhitespace() }) { "API Key 格式无效" }
                 val balance=request("/user/balance",key);vault.save(key)
@@ -114,8 +118,7 @@ class DeepSeek private constructor(private val context: Context) {
         val blocks=JSONArray().put(JSONObject().put("type","text").put("text",text.ifBlank { "请读取图片中的安排，缺少信息请追问。" }))
         images.forEach { blocks.put(JSONObject().put("type","image_url").put("image_url",JSONObject().put("url","data:image/png;base64,"+Base64.encodeToString(it.bytes,Base64.NO_WRAP)).put("detail","high"))) }
         messages.put(JSONObject().put("role","user").put("content",blocks))
-        val response=request("/chat/completions",vault.read(),JSONObject().put("model","deepseek-flash").put("messages",messages)
-            .put("thinking",JSONObject().put("type","disabled")).put("response_format",JSONObject().put("type","json_object")).put("max_tokens",8192).put("stream",false))
+        val response=request("/chat/completions",vault.read(),AiConfig.request(messages, AiConfig.effort(context)))
         val choice=response.getJSONArray("choices").getJSONObject(0)
         require(choice.getString("finish_reason")=="stop") { "AI 输出不完整，请缩小日期范围后重试" }
         val content=choice.getJSONObject("message").getString("content")
@@ -137,10 +140,12 @@ class DeepSeek private constructor(private val context: Context) {
             if (images.isNotEmpty()) Core.get(context).acceptExtractedTable(extracted) else "review"
         }.get(5,TimeUnit.SECONDS) else "none"
         val saved=JSONArray();for(i in maxOf(0,old.length()-10) until old.length())saved.put(old.getJSONObject(i))
-        saved.put(JSONObject().put("role","user").put("content",text)).put(JSONObject().put("role","assistant").put("content",content))
+        val sentText = (text.ifBlank { "请读取这些安排截图。" }) + if (images.isNotEmpty()) "\n附 ${images.size} 张图片（已发送）" else ""
+        saved.put(JSONObject().put("role","user").put("content",sentText)).put(JSONObject().put("role","assistant").put("content",content))
         prefs.edit().putString("history",saved.toString()).commit()
+        removeImage()
         return JSONObject().put("document",document).put("usage",response.optJSONObject("usage")?:JSONObject())
-            .put("tableResult", tableResult).put("periodTable", extracted)
+            .put("tableResult", tableResult).put("periodTable", extracted).put("images", attachments())
     }
     companion object {
         val executor=Executors.newSingleThreadExecutor()
