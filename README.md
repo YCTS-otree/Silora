@@ -1,48 +1,98 @@
 # Silora · 静律
 
-版本 **1.0.0 Demo**。Android 系统 WebView 渲染的可安装交互演示，深色蓝色夜空 / 浅色绿色自然，底部为 AI、计划表、设置。
+**v1.1.0**：原生计划核心 + DeepSeek 文字 / 图片接入。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
 
-## 本轮交付
+## 已实现
 
-- AI 页面：文字输入、快捷提示、明确的 Demo 回复，不调用模型。
-- 计划表：新增、删除、今天筛选、本地保存；校验结束时间及区间冲突。
-- 设置：系统 / 深色 / 浅色主题，保存主题偏好，清除演示计划。
-- 单 WebView，使用 WebViewAssetLoader HTTPS 本地来源；禁用文件访问、外部导航和非本地资源；用户文字通过 textContent 渲染。
-- 无联网权限、账号、服务器、遥测和常驻服务。
+- SQLite 持久化计划、执行状态、策略与最近 500 条执行记录；事务更新与乐观版本检查。
+- 手动新增、编辑、删除、启停，跨日绝对时间，JSON 导入预览 / 确认 / 导出。
+- 严格 JSON 语法、字段、UTC 偏移、时间范围、重复及冲突校验。区间采用 `[start,end)`。
+- AlarmManager `setExactAndAllowWhileIdle` 安排下一个边界，广播接收器重新计算当前状态；不靠 WebView、轮询或常驻服务执行。
+- 每个闹钟关联计划集合版本、计划 ID 和时间标识；旧事件 / 重复事件失效。重启、升级、时间 / 时区变化及授权恢复后重新调度，绝对时间不平移。
+- AudioManager 真实切换响铃 / 振动 / 静音并读取实际结果；连续区间不错误恢复。支持结束恢复策略、尊重外部修改 / 下一节点恢复 / 自动计划优先。
+- 精确闹钟、通知策略访问的状态显示和系统设置入口；未获权限时明确显示不可用。
+- DeepSeek `deepseek-flash`：免费余额接口验证 Key、文字与系统文件选择器图片输入、多轮追问、JSON 候选计划、确认后保存、Token 用量、取消请求及错误分类。
+- 密钥由 Android Keystore AES-GCM 加密；网络只在 Kotlin 层使用 OkHttp 访问固定 DeepSeek HTTPS 地址，禁用重定向。AI 线程独立于调度线程。
+- 本地对话保留最近 12 条消息，图片仅保留于进程内存中供追问，移除 / 清理 / 进程结束后释放。PNG 处理最长边 2560 像素、最多 8 MB，保留文字清晰度；大图建议裁剪。
 
-这不是 Work.md 中的完整 MVP。DeepSeek、图片识别、Keystore、Room、AlarmManager、铃声切换、权限引导和完整教学尚未实现。演示计划保存在 WebView localStorage，不作为未来原生执行器的数据来源；卸载会删除数据。不支持编辑、跨日、JSON 导入导出或周视图。
+AI 返回不会自动修改数据库。候选计划必须经过原生校验及明确确认。旧版 Demo 的 localStorage 演示记录不会自动迁移为可执行计划。
 
-## 构建和安装
+## 构建与安装
 
-使用已有 JDK 17、Gradle 8.11.1、AGP 8.9.2、Kotlin 2.1.20、AndroidX WebKit 1.12.1。minSdk 29、targetSdk 34、compileSdk 35。
+现有 JDK 17、Gradle 8.11.1、AGP 8.9.2、Kotlin 2.1.20；AndroidX WebKit 1.12.1、OkHttp 4.12.0。minSdk 29 / targetSdk 34 / compileSdk 35，SDK Build Tools 35.0.0。
 
-配置 `ANDROID_HOME` 指向现有 Android SDK，安装 platform 35 / build-tools 35.0.0。首次依赖下载需要网络；缓存齐全时可添加 `--offline`。
+设置 `ANDROID_HOME` 后执行：
 
 ```powershell
-.\gradlew.bat --project-cache-dir Temp/gradle-project :app:assembleDebug :app:lintDebug
-adb install -r Release/v1.0.0/Silora-v1.0.0-demo-debug.apk
+.\gradlew.bat --project-cache-dir Temp/gradle-project :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+adb install -r Release/v1.1.0/Silora-v1.1.0-debug.apk
 adb shell am start -n com.silora.app/.MainActivity
 ```
 
-构建产物位于 `Temp/build/app/outputs/apk/debug/`。交付 APK 位于 `Release/v1.0.0/`，使用开发签名，不是正式发布签名。后续版本不得覆盖已有 Release 目录。Gradle 缓存锁出现拒绝访问时需给构建进程现有缓存写入权限，无需安装另一套工具链。
+缓存齐全时增加 `--offline`。构建中间文件放在 `Temp/build/`。交付 APK 使用开发签名，不是正式发布签名。旧版本保留于 `Release/v1.0.0/`，不得覆盖。
 
-## 验证
+## 使用与授权
 
-2026-11-15：assembleDebug、lintDebug、JavaScript 语法检查通过；已在 CET-AL00（Android 12 / API 31）安装运行并检查深色首页、浅色设置页。Lint 保留 targetSdk 34 与启用 JavaScript 两项警告：前者遵循需求，后者用于本地 UI，并通过 CSP 和本地来源限制降低风险。
+1. 设置 → 精确闹钟授权，允许静律安排闹钟。
+2. 设置 → 通知策略访问，授予静律访问权限。这不等于开启系统勿扰模式，也不代表媒体、闹钟等所有声音都会静音。
+3. 在计划表创建时间段，核对日期 / 时区 / 模式后确认。若当前已处于区间内，会立即重新计算模式。
+4. 在设置粘贴个人 DeepSeek API Key 并验证，或使用已配置 Key。可从 [DeepSeek 开放平台](https://platform.deepseek.com/) 获取；[官方 API 文档](https://api-docs.deepseek.com/zh-cn/)说明接口。
+5. AI 页面发送文字或选择课表图片；必要内容直接提交到 DeepSeek。信息不足会追问，完整候选计划确认后才执行。
 
-真机 WebView 自动检查覆盖三个菜单、默认 AI 页、主题切换、计划保存、重叠阻止、非法时间阻止、文字安全显示、页面重载后数据恢复、删除及无水平溢出。运行方式（Node 22+，在无个人演示数据的测试安装中执行）：
+删除 Key 不影响已保存计划。密钥不会打包进 APK；不要提交 `.key`、签名库或凭据。Debug APK 支持 WebView 调试，仅在可信开发设备使用。
+
+## 验证记录（2026-11-15）
+
+设备：CET-AL00，Android 12 / API 31。
+
+- 构建、14 项 JVM 时间 / 状态机 / JSON 测试通过。
+- 14 项实机检查通过：Android JSON、SQLite 事务回滚、版本冲突、旧事件 / 重复事件拦截、当前区间立即执行、手动修改保护。
+- 退出界面、终止后台进程、关闭屏幕后，真实闹钟依次执行振动 → 静音 → 恢复原始响铃；系统模式值为 1 → 0 → 2，执行记录与系统实际读数一致。
+- 精确闹钟授权撤销时未调度；恢复后重新调度。测试结束恢复原模式并清理测试计划。
+- WebView 检查通过：三菜单、双主题、页面重载后 SQLite 数据恢复、过期版本拒绝、非法区间拒绝、用户文字安全显示。
+- 真实 DeepSeek：Key 验证与余额可用、无效 Key 返回 401 且保留旧 Key、取消请求、文字追问与补充后生成计划、系统文件选择器选图和真实图片识别、候选计划界面确认后持久化并注册闹钟。
+- Keystore 加密配置在应用升级后仍有效。未测试付费余额耗尽、服务端故障或所有断网场景。
+- Lint 无错误，保留 6 项提示：targetSdk 34、本地 UI 启用 JavaScript、两个仅持有 Application Context 的单例、两个需要明确落盘的 SharedPreferences commit。
+
+可重复验证：
 
 ```powershell
+# 单元测试与真实 Android JSON / SQLite / 模式保护测试（仅空计划测试安装）
+.\gradlew.bat --project-cache-dir Temp/gradle-project :app:testDebugUnitTest :app:assembleDebugAndroidTest
+adb install -r Temp/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w com.silora.app.test/com.silora.app.NativeChecks
+
+# WebView 冒烟检查，只新增再删除一条停用的测试计划（Node 22+）
 $siloraPid = (adb shell pidof com.silora.app).Trim()
 adb forward tcp:9222 localabstract:webview_devtools_remote_$siloraPid
-node tests/demo-smoke.mjs
+node tests/core-smoke.mjs
 adb forward --remove tcp:9222
+
+# 真实定时切换测试：仅空计划安装，约 3 分钟，会改变实际铃声
+node tests/native-device.mjs
 ```
 
-WebView 调试仅在 debuggable APK 中启用。测试会创建再删除一条演示记录，切换至浅色主题。真实 AI 请求与铃声调度不在本轮验证范围。Android 10、11、13–17、横屏、大字体、键盘遮挡及 WebView 渲染进程故障尚未完整验证。
+原生仪器测试和定时测试需要精确闹钟及通知策略访问已授权。定时脚本结束保留已过期测试记录供检查；删除记录后才可重新执行空计划测试。
 
-## 后续 MVP 与测量
+## 结构与协议
 
-后续需先核验 DeepSeek 官方模型及图片协议，再实施原生存储、校验器、调度和真实 AI。Demo 不接受或保存 API Key，也无需授予精确闹钟、通知或通知策略权限；完整授权说明随真实功能提供。
+- `Plan.kt`：纯时间校验与模式状态机。
+- `PlanStore.kt`：SQLite `plans`、`meta`、`events`；`meta` 保存全局 revision、恢复基线、预期铃声、外部修改抑制状态和下一闹钟标识。
+- `Core.kt`、`ScheduleReceiver.kt`：串行调度与系统执行，失败不假报成功。
+- `DeepSeek.kt`、`KeyVault.kt`：独立网络线程、限长历史和凭据加密。
+- `assets/system-prompt.txt`：实际使用的系统提示词。
+- `docs/plan.schema.json`、`docs/example-plan.json`：协议及默认停用的导入示例。原生代码额外校验偏移、时间顺序、冲突和范围；不只依赖 Schema。
 
-APK 大小可用 `Get-Item Release/v1.0.0/*.apk` 检查；前台与退后台内存用 `adb shell dumpsys meminfo com.silora.app` 对照记录；后台进程用 `adb shell pidof com.silora.app` 检查。Demo 没有后台任务，不保证进程驻留。日志检查限应用进程，未来实现不得记录 API Key 或请求认证头。
+JSON 支持 add、按 scope replace（空 intervals 可清空范围）；按 ID 编辑 / 删除通过原生计划管理接口实现。替换范围不能切断原有区间，需先编辑跨界时间段。
+
+## 实际限制与后续工作
+
+本版完成原生核心和 AI 首轮接入，**不是 Work.md 的全部 MVP 验收完成**：完整首次启动交互教学、周视图 / 下周提醒、间隔合并、缺失下周计划策略、网络校时尚未实现。JSON 导入导出目前通过文本框粘贴 / 复制。
+
+尚未完成实机重启、长期深度休眠、厂商后台限制、Android 10–11 / 13–17、横屏大字体、WebView 进程故障、全部网络错误场景验证。重启 / 时区恢复分支已实现，但不能把模拟或代码检查当作实机验证。
+
+Android 12+ 需要精确闹钟授权，Android 14 新装应用常默认无此授权。Android 15+ 对勿扰策略的能力可能不同；本版仍 targetSdk 34，不假设未来系统行为一致。系统休眠会限制密集的 allow-while-idle 闹钟，短间隔不能承诺零延迟；误点系统“强行停止”后需重开应用。参考 [Android 定时说明](https://developer.android.com/develop/background-work/services/alarms) 和 [AudioManager 限制](https://developer.android.com/reference/android/media/AudioManager)。
+
+外部修改检测依赖实际模式与应用预期模式比较。进程不在时无法持续检测，更不能可靠识别是谁改的；若模式改动后又回到相同值，可能无法观察到。AI 网络失败不会影响已保存计划。网络失败不自动重发收费请求，避免重复消耗，可手动重试。
+
+APK 大小通过 `Get-Item Release/v1.1.0/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。

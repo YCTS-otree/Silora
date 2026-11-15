@@ -5,3 +5,6 @@ Temp/
 local.properties
 .idea/
 *.iml
+*.key
+*.keystore
+*.jks
