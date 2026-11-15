@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'"><title>Silora · 静律</title><link rel="stylesheet" href="style.css"></head>
+<body><div class="app">
+<header><div class="brand"><span class="logo">s</span><div><b>Silora <small>静律</small></b><span class="eyebrow">让安静，自有节律</span></div></div><span class="demo">DEMO 1.0</span></header>
+<main>
+<section id="ai" class="page active" aria-label="AI 助手">
+<div class="hero"><span class="overline">YOUR QUIET COMPANION</span><div class="orb" aria-hidden="true">☾</div><h1>把时间交给静律<br>把专注留给自己</h1><p>课程、会议，或一段独处的时光。<br>告诉我，什么时候需要安静。</p><div class="status"><i></i> 界面演示 · 无需联网</div></div>
+<div id="messages" aria-live="polite"></div>
+<div class="suggestions"><button data-prompt="工作日上午 9 点到 11 点保持静音">✧ 专注工作</button><button data-prompt="帮我安排明天下午的课程时间">▦ 课程安排</button></div>
+<div class="composer"><label class="sr" for="prompt">描述你的时间安排</label><textarea id="prompt" rows="2" maxlength="1000" placeholder="例如：明天 9:00—10:30 开会，设为振动"></textarea><div class="compose-actions"><span>文字计划 · Demo</span><button id="send" class="primary" aria-label="发送消息">发送 ↑</button></div></div>
+<p class="footnote">Demo 不调用 AI，也不会更改手机铃声。</p>
+</section>
+<section id="plans" class="page" aria-label="计划表"><div class="section-heading"><div><span class="overline">YOUR RHYTHM</span><h1>计划表</h1></div><button class="primary" id="add">＋ 新建</button></div><p class="subtitle" id="today"></p><div class="notice">本地演示计划，仅用于体验界面；不会触发系统定时任务。</div><div class="segmented" id="view-switch"><button class="selected" data-view="all">全部计划</button><button data-view="today">今天</button></div><div id="plan-list"></div></section>
+<section id="settings" class="page" aria-label="设置"><span class="overline">MAKE IT YOURS</span><h1>设置</h1><p class="subtitle">找到适合你的安静方式。</p><h2>外观</h2><div class="card"><p class="setting-title">主题模式 <span>即时切换</span></p><div class="theme-options"><button data-theme="system">◐<br>跟随系统</button><button data-theme="dark">☾<br>蓝色夜空</button><button data-theme="light">❀<br>绿色自然</button></div></div><h2>功能状态</h2><div class="card rows"><div><span>DeepSeek AI</span><em>尚未接入</em></div><div><span>系统铃声与定时调度</span><em>尚未接入</em></div><div><span>计划存储</span><em>本机演示数据</em></div></div><h2>关于</h2><div class="card"><p class="setting-title">Silora · 静律 <span>v1.0.0 Demo</span></p><p class="subtitle">系统 WebView 渲染，轻巧的安静伙伴。</p><button id="clear" class="text-button">清除演示计划</button></div></section>
+</main>
+<nav aria-label="底部导航"><button data-tab="ai" class="active" aria-current="page"><span>✧</span>AI</button><button data-tab="plans"><span>▦</span>计划表</button><button data-tab="settings"><span>⚙</span>设置</button></nav>
+</div>
+<dialog id="editor"><form id="plan-form"><h2>新建演示计划</h2><label>名称<input id="label" maxlength="60" required placeholder="例如：专注时间"></label><label>日期<input id="date" type="date" required></label><div class="time-row"><label>开始<input id="start" type="time" required></label><label>结束<input id="end" type="time" required></label></div><label>铃声模式<select id="mode"><option value="vibrate">振动</option><option value="silent">静音</option><option value="ring">响铃</option></select></label><p id="error" role="alert"></p><div class="dialog-actions"><button type="button" id="cancel">取消</button><button class="primary" type="submit">保存演示计划</button></div></form></dialog>
+<div id="toast" role="status" hidden></div><script src="app.js"></script></body></html>
