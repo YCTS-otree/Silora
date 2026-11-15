@@ -21,7 +21,7 @@ class PlanStore(context: Context, databaseName: String = "silora.db") : SQLiteOp
     fun plans(): List<Plan> = readableDatabase.rawQuery("SELECT id,start,end,mode,label,enabled FROM plans ORDER BY start", null).use { c ->
         buildList { while(c.moveToNext()) add(Plan(c.getString(0),c.getLong(1),c.getLong(2),c.getInt(3),c.getString(4),c.getInt(5)==1)) }
     }
-    fun replace(plans: List<Plan>, expectedRevision: Long) {
+    fun replace(plans: List<Plan>, expectedRevision: Long, metadata: Map<String, String> = emptyMap()) {
         PlanRules.validate(plans)
         val db=writableDatabase
         db.beginTransaction()
@@ -32,6 +32,18 @@ class PlanStore(context: Context, databaseName: String = "silora.db") : SQLiteOp
                 put("id",p.id);put("start",p.start);put("end",p.end);put("mode",p.mode);put("label",p.label);put("enabled",if(p.enabled)1 else 0)
             }) }
             put("revision",(expectedRevision+1).toString())
+            metadata.forEach { (key, value) -> put(key, value) }
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+    }
+    fun saveTable(table: JSONObject?, expectedVersion: Long) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            require(get("periodVersion", "0").toLong() == expectedVersion) { "课时表已变化，请重新打开后编辑" }
+            val normalized = table?.let { AcademicJson.tableJson(AcademicJson.table(it)).toString() }.orEmpty()
+            put("periodTable", normalized)
+            put("periodVersion", (expectedVersion + 1).toString())
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
     }

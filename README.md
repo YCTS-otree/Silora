@@ -1,6 +1,6 @@
 # Silora · 静律
 
-**v1.1.0**：原生计划核心 + DeepSeek 文字 / 图片接入。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
+**v1.2.0**：多图片、保存课时表、单双周计划、本地条件脚本与白天到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
 
 ## 已实现
 
@@ -13,9 +13,18 @@
 - 精确闹钟、通知策略访问的状态显示和系统设置入口；未获权限时明确显示不可用。
 - DeepSeek `deepseek-flash`：免费余额接口验证 Key、文字与系统文件选择器图片输入、多轮追问、JSON 候选计划、确认后保存、Token 用量、取消请求及错误分类。
 - 密钥由 Android Keystore AES-GCM 加密；网络只在 Kotlin 层使用 OkHttp 访问固定 DeepSeek HTTPS 地址，禁用重定向。AI 线程独立于调度线程。
-- 本地对话保留最近 12 条消息，图片仅保留于进程内存中供追问，移除 / 清理 / 进程结束后释放。PNG 处理最长边 2560 像素、最多 8 MB，保留文字清晰度；大图建议裁剪。
+- 本地对话保留最近 12 条消息，图片仅保留于进程内存中供追问，移除 / 清理 / 进程结束后释放。PNG 处理最长边 2560 像素、每张最多 8 MB；最多 6 张、合计最多 16 MB，保留文字清晰度；大图建议裁剪。
 
-AI 返回不会自动修改数据库。候选计划必须经过原生校验及明确确认。旧版 Demo 的 localStorage 演示记录不会自动迁移为可执行计划。
+首次从上传图片识别出的有效课时表会自动保存；已有课时表的覆盖需确认。候选铃声计划必须经过原生校验及明确确认。旧版 Demo 的 localStorage 演示记录不会自动迁移为可执行计划。
+
+## 课表、脚本与到期提醒
+
+- 可同时选择课时表和课程安排图片。课时表保存各节上下课时间，后续 AI 自动引用；设置中允许编辑、覆盖、删除，修改不会反向改动已确认计划。
+- 模型可输出每周 / 单双周规则；周数依据明确的“第 1 周周一”，生效范围包含结束日。缺少学期日期会追问，确认后一次展开并持久化，学期内无需每周调用模型。
+- 模型也可编写 Silora 计划脚本，支持周数、星期、日期、取模和条件组合。脚本由 Kotlin 本地解释器展开成普通计划，不加载 Python / JavaScript 运行时；无文件、网络、凭据或系统 API。详见 [计划规则协议](docs/academic-protocol.md)。
+- 当前支持一套周期 / 脚本，重新应用会替换原规则生成的区间并保留手动计划；对某次课程的单独编辑可能在下次重新生成时被覆盖。
+- 当期结束取所有启用计划中最后一个结束时间。默认在其前 24 小时内的 09、14、18 点提醒；可设置 2–6 个 08–18 点整点。正式提醒和补发仅在 08:00–18:59，错过多个时点只补最新一次，结束后不补发。新增后续计划后按新结束时间重新计算。
+- 设置中开启系统通知，并可发送测试通知；测试按钮不受白天限制。提醒使用独立的非精确定时器，系统休眠可能延迟或错过提醒，不占用铃声精确调度路径。
 
 ## 构建与安装
 
@@ -25,11 +34,11 @@ AI 返回不会自动修改数据库。候选计划必须经过原生校验及�
 
 ```powershell
 .\gradlew.bat --project-cache-dir Temp/gradle-project :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-adb install -r Release/v1.1.0/Silora-v1.1.0-debug.apk
+adb install -r Release/v1.2.0/Silora-v1.2.0-debug.apk
 adb shell am start -n com.silora.app/.MainActivity
 ```
 
-缓存齐全时增加 `--offline`。构建中间文件放在 `Temp/build/`。交付 APK 使用开发签名，不是正式发布签名。旧版本保留于 `Release/v1.0.0/`，不得覆盖。
+缓存齐全时增加 `--offline`。构建中间文件放在 `Temp/build/`。交付 APK 使用开发签名，不是正式发布签名。旧版本保留于各自的 `Release/v版本号/`，不得覆盖。
 
 ## 使用与授权
 
@@ -45,13 +54,16 @@ adb shell am start -n com.silora.app/.MainActivity
 
 设备：CET-AL00，Android 12 / API 31。
 
-- 构建、14 项 JVM 时间 / 状态机 / JSON 测试通过。
+- v1.2.0 构建、29 项 JVM 测试通过，覆盖原时间 / 状态机 / JSON，以及单双周跨年、夏令时歧义、脚本边界 / 冲突、白天提醒和去重。
 - 14 项实机检查通过：Android JSON、SQLite 事务回滚、版本冲突、旧事件 / 重复事件拦截、当前区间立即执行、手动修改保护。
 - 退出界面、终止后台进程、关闭屏幕后，真实闹钟依次执行振动 → 静音 → 恢复原始响铃；系统模式值为 1 → 0 → 2，执行记录与系统实际读数一致。
 - 精确闹钟授权撤销时未调度；恢复后重新调度。测试结束恢复原模式并清理测试计划。
 - WebView 检查通过：三菜单、双主题、页面重载后 SQLite 数据恢复、过期版本拒绝、非法区间拒绝、用户文字安全显示。
 - 真实 DeepSeek：Key 验证与余额可用、无效 Key 返回 401 且保留旧 Key、取消请求、文字追问与补充后生成计划、系统文件选择器选图和真实图片识别、候选计划界面确认后持久化并注册闹钟。
 - Keystore 加密配置在应用升级后仍有效。未测试付费余额耗尽、服务端故障或所有断网场景。
+- 新增 7 项 Android JSON / SQLite 检查通过；真机 WebView 检查覆盖课时表版本冲突、规则替换保留手动计划、日期排除、拒绝宿主代码和拒绝夜间配置。
+- 真实 DeepSeek 联合读取两张合成课表图片，首次保存课时表并生成单双周规则；不再上传图片后成功引用本地课时表生成带排除日期的脚本。终止并重开应用后课时表和周期计划仍在。测试计划和课时表已清理。
+- 真机通知权限开启、通知渠道和可见测试通知验证通过；多个白天时点 / 夜间抑制由可控时钟单元测试验证，未等待完整 24 小时实测。课时表编辑和脚本预览经屏幕检查，无水平溢出。
 - Lint 无错误，保留 6 项提示：targetSdk 34、本地 UI 启用 JavaScript、两个仅持有 Application Context 的单例、两个需要明确落盘的 SharedPreferences commit。
 
 可重复验证：
@@ -62,10 +74,17 @@ adb shell am start -n com.silora.app/.MainActivity
 adb install -r Temp/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell am instrument -w com.silora.app.test/com.silora.app.NativeChecks
 
+# 隔离数据库的课时表 / 周期 / 脚本 Android 检查
+.\gradlew.bat --project-cache-dir Temp/gradle-project '-PtestRunner=com.silora.app.AcademicChecks' :app:assembleDebugAndroidTest
+adb install -r Temp/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w com.silora.app.test/com.silora.app.AcademicChecks
+
 # WebView 冒烟检查，只新增再删除一条停用的测试计划（Node 22+）
 $siloraPid = (adb shell pidof com.silora.app).Trim()
 adb forward tcp:9222 localabstract:webview_devtools_remote_$siloraPid
 node tests/core-smoke.mjs
+# 需要没有现存课时表和周期规则；结束自动清理自身测试数据
+node tests/academic-smoke.mjs
 adb forward --remove tcp:9222
 
 # 真实定时切换测试：仅空计划安装，约 3 分钟，会改变实际铃声
@@ -87,7 +106,7 @@ JSON 支持 add、按 scope replace（空 intervals 可清空范围）；按 ID 
 
 ## 实际限制与后续工作
 
-本版完成原生核心和 AI 首轮接入，**不是 Work.md 的全部 MVP 验收完成**：完整首次启动交互教学、周视图 / 下周提醒、间隔合并、缺失下周计划策略、网络校时尚未实现。JSON 导入导出目前通过文本框粘贴 / 复制。
+本版完成原生核心、AI 接入与课表规则扩展，**不是 Work.md 的全部 MVP 验收完成**：完整首次启动交互教学、周视图、间隔合并、缺失下周计划策略、网络校时尚未实现。JSON 导入导出目前通过文本框粘贴 / 复制。
 
 尚未完成实机重启、长期深度休眠、厂商后台限制、Android 10–11 / 13–17、横屏大字体、WebView 进程故障、全部网络错误场景验证。重启 / 时区恢复分支已实现，但不能把模拟或代码检查当作实机验证。
 
@@ -95,4 +114,4 @@ Android 12+ 需要精确闹钟授权，Android 14 新装应用常默认无此授
 
 外部修改检测依赖实际模式与应用预期模式比较。进程不在时无法持续检测，更不能可靠识别是谁改的；若模式改动后又回到相同值，可能无法观察到。AI 网络失败不会影响已保存计划。网络失败不自动重发收费请求，避免重复消耗，可手动重试。
 
-APK 大小通过 `Get-Item Release/v1.1.0/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。
+APK 大小通过 `Get-Item Release/v1.2.0/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。

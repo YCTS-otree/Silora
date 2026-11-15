@@ -11,6 +11,7 @@ class ScheduleReceiver : BroadcastReceiver() {
             try {
                 val core=Core.get(context)
                 if(intent.action=="com.silora.app.ALARM")core.reconcile("定时事件",intent.data?.lastPathSegment ?: "invalid")
+                else if(intent.action==RenewalReminders.ACTION)core.reminders.received(intent.data?.lastPathSegment ?: "invalid")
                 else {
                     // Reboot/clock changes discard any cached scheduling identity and rebuild absolute instants.
                     core.invalidateAlarm()

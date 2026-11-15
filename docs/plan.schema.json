@@ -1,27 +1,361 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Silora plan protocol v1",
+  "title": "Silora plan protocol v1 (app 1.2.0)",
   "type": "object",
-  "required": ["schema_version", "status"],
+  "required": [
+    "schema_version",
+    "status"
+  ],
   "properties": {
-    "schema_version": {"const": 1},
-    "status": {"enum": ["plan_ready", "clarification_required"]},
-    "question": {"type": "string", "minLength": 1},
-    "missing_fields": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-    "operation": {"enum": ["add", "replace"]},
-    "time_zone": {"type": "string"},
-    "scope": {"type": "object", "required": ["start", "end"], "properties": {"start": {"type": "string", "format": "date-time"}, "end": {"type": "string", "format": "date-time"}}},
-    "intervals": {"type": "array", "maxItems": 2000, "items": {"type": "object", "required": ["start", "end", "mode", "label"], "properties": {
-      "id": {"type": "string", "pattern": "^[a-zA-Z0-9_-]{1,80}$"},
-      "start": {"type": "string", "format": "date-time"},
-      "end": {"type": "string", "format": "date-time"},
-      "mode": {"enum": ["ring", "vibrate", "silent"]},
-      "label": {"type": "string", "minLength": 1, "maxLength": 120},
-      "enabled": {"type": "boolean"}
-    }}}
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "enum": [
+        "plan_ready",
+        "clarification_required",
+        "period_table_ready",
+        "recurrence_ready",
+        "script_ready"
+      ]
+    },
+    "question": {
+      "type": "string",
+      "minLength": 1
+    },
+    "missing_fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "operation": {
+      "enum": [
+        "add",
+        "replace"
+      ]
+    },
+    "time_zone": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "object",
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "intervals": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": {
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "mode",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mode": {
+            "enum": [
+              "ring",
+              "vibrate",
+              "silent"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "period_table": {
+      "type": "object",
+      "required": [
+        "name",
+        "time_zone",
+        "periods"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "time_zone": {
+          "type": "string"
+        },
+        "periods": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "required": [
+              "number",
+              "start",
+              "end"
+            ],
+            "properties": {
+              "number": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32
+              },
+              "start": {
+                "type": "string",
+                "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+              },
+              "end": {
+                "type": "string",
+                "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "recurrence": {
+      "type": "object",
+      "required": [
+        "name",
+        "anchor_monday",
+        "valid_from",
+        "valid_until",
+        "time_zone",
+        "entries"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "anchor_monday": {
+          "type": "string",
+          "format": "date"
+        },
+        "valid_from": {
+          "type": "string",
+          "format": "date"
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date"
+        },
+        "time_zone": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": [
+              "weekday",
+              "weeks",
+              "start",
+              "end",
+              "mode",
+              "label"
+            ],
+            "properties": {
+              "weekday": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 7
+              },
+              "weeks": {
+                "enum": [
+                  "all",
+                  "odd",
+                  "even"
+                ]
+              },
+              "start": {
+                "type": "string",
+                "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+              },
+              "end": {
+                "type": "string",
+                "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+              },
+              "mode": {
+                "enum": [
+                  "ring",
+                  "vibrate",
+                  "silent"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            }
+          }
+        }
+      }
+    },
+    "script": {
+      "type": "object",
+      "required": [
+        "name",
+        "anchor_monday",
+        "valid_from",
+        "valid_until",
+        "time_zone",
+        "source"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "anchor_monday": {
+          "type": "string",
+          "format": "date"
+        },
+        "valid_from": {
+          "type": "string",
+          "format": "date"
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date"
+        },
+        "time_zone": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        }
+      }
+    }
   },
   "allOf": [
-    {"if": {"properties": {"status": {"const": "plan_ready"}}}, "then": {"required": ["operation", "time_zone", "intervals"]}, "else": {"required": ["question", "missing_fields"]}},
-    {"if": {"required": ["operation"], "properties": {"operation": {"const": "replace"}}}, "then": {"required": ["scope"]}}
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "plan_ready"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "operation",
+          "time_zone",
+          "intervals"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "operation"
+        ],
+        "properties": {
+          "operation": {
+            "const": "replace"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "scope"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "clarification_required"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "question",
+          "missing_fields"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "period_table_ready"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "period_table"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "recurrence_ready"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "recurrence"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "script_ready"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "script"
+        ]
+      }
+    }
   ]
 }

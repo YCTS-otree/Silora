@@ -60,7 +60,7 @@ class MainActivity : Activity() {
                         DeepSeek.get(this).begin()
                         if(action=="ai_image") {
                             imageReply={ result -> reply.postMessage(result.put("requestId",requestId).toString()) }
-                            try { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE),5001) }
+                            try { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true).addCategory(Intent.CATEGORY_OPENABLE),5001) }
                             catch(e:Exception) { DeepSeek.busy.set(false);imageReply=null;throw IllegalStateException("系统文件选择器不可用") }
                         } else DeepSeek.executor.execute {
                             val response=JSONObject().put("requestId",requestId)
@@ -70,9 +70,18 @@ class MainActivity : Activity() {
                             runOnUiThread { if(!isDestroyed)reply.postMessage(response.toString()) }
                         }
                     } else if(action=="permission") {
+                        if (request.getString("permission") == "notifications" && android.os.Build.VERSION.SDK_INT >= 33 &&
+                            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED &&
+                            (!getPreferences(MODE_PRIVATE).getBoolean("notificationAsked", false) || shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS))) {
+                            getPreferences(MODE_PRIVATE).edit().putBoolean("notificationAsked", true).apply()
+                            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 5002)
+                            reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
+                            return@addWebMessageListener
+                        }
                         val intent=when(request.getString("permission")) {
                             "exact" -> if(android.os.Build.VERSION.SDK_INT>=31)Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:$packageName")) else Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName"))
                             "policy" -> Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                            "notifications" -> Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                             else -> throw IllegalArgumentException("未知权限")
                         }
                         startActivity(intent)
@@ -118,16 +127,24 @@ class MainActivity : Activity() {
         super.onActivityResult(requestCode,resultCode,data)
         if(requestCode!=5001)return
         val callback=imageReply;imageReply=null
-        if(resultCode!=RESULT_OK || data?.data==null) {
+        val uris = buildList {
+            data?.clipData?.let { clip -> for (i in 0 until clip.itemCount) add(clip.getItemAt(i).uri) }
+            if (isEmpty()) data?.data?.let { add(it) }
+        }.distinct()
+        if(resultCode!=RESULT_OK || uris.isEmpty()) {
             DeepSeek.busy.set(false);callback?.invoke(JSONObject().put("ok",true).put("data",JSONObject().put("cancelled",true)));return
         }
         DeepSeek.executor.execute {
             val result=JSONObject()
-            try { result.put("ok",true).put("data",DeepSeek.get(this).selectImage(data.data!!)) }
+            try { result.put("ok",true).put("data",DeepSeek.get(this).selectImages(uris)) }
             catch(e:Exception) { result.put("ok",false).put("error",e.message ?: "无法读取图片") }
             finally { DeepSeek.busy.set(false) }
             runOnUiThread { if(!isDestroyed)callback?.invoke(result) }
         }
+    }
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 5002) web.evaluateJavascript("window.refresh && window.refresh()", null)
     }
     override fun onDestroy() { web.destroy(); super.onDestroy() }
 }

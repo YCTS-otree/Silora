@@ -15,6 +15,7 @@ import java.util.concurrent.Executors
 /** All database, state-machine and alarm operations are serialized on this executor. */
 class Core private constructor(private val context: Context) {
     val store=PlanStore(context)
+    val reminders = RenewalReminders(context, store)
     private val audio=context.getSystemService(AudioManager::class.java)
     private val alarms=context.getSystemService(AlarmManager::class.java)
     private val notifications=context.getSystemService(NotificationManager::class.java)
@@ -76,6 +77,7 @@ class Core private constructor(private val context: Context) {
             store.log(active?.id,"failed",store.get("issue"),audio.ringerMode)
         }
         schedule(plans,now)
+        reminders.reschedule(plans, now)
         store.put("lastSync",reason)
     }
 
@@ -100,10 +102,61 @@ class Core private constructor(private val context: Context) {
         .put("activeId",store.state().activeId).put("suppressed",store.state().suppressed)
         .put("issue",store.get("issue")).put("restore",store.get("restore","previous"))
         .put("manual",store.get("manual","respect")).put("zone",ZoneId.systemDefault().id)
-        .put("events",store.events()).put("version","1.1.0").put("apiConfigured",KeyVault(context).configured())
+        .put("events",store.events()).put("version","1.2.0").put("apiConfigured",KeyVault(context).configured())
+        .put("periodTable", store.get("periodTable").takeIf { it.isNotBlank() }?.let { JSONObject(it) })
+        .put("periodVersion", store.get("periodVersion", "0").toLong())
+        .put("automation", store.get("automation").takeIf { it.isNotBlank() }?.let { JSONObject(it) })
+        .put("reminder", reminders.snapshot())
+
+    fun prepareAutomation(document: JSONObject): Pair<JSONObject, List<Plan>> {
+        val previous = store.get("automation").takeIf { it.isNotBlank() }?.let { JSONObject(it) }
+        val (normalized, generated) = AcademicJson.automation(document, previous?.getString("id"))
+        val prefix = previous?.let { "cycle_${it.getString("id")}_" }
+        val retained = store.plans().filterNot { prefix != null && it.id.startsWith(prefix) }
+        return normalized to PlanRules.validate(retained + generated)
+    }
+
+    fun acceptExtractedTable(table: JSONObject): String {
+        val normalized = AcademicJson.tableJson(AcademicJson.table(table))
+        val old = store.get("periodTable")
+        if (old.isBlank()) {
+            store.saveTable(normalized, store.get("periodVersion", "0").toLong())
+            return "saved"
+        }
+        return if (old == normalized.toString()) "unchanged" else "review"
+    }
 
     fun command(o: JSONObject): JSONObject {
         when(o.getString("action")) {
+            "period_save" -> store.saveTable(o.getJSONObject("table"), o.getLong("periodVersion"))
+            "period_clear" -> store.saveTable(null, o.getLong("periodVersion"))
+            "automation_preview" -> {
+                val (rule, candidate) = prepareAutomation(o.getJSONObject("rule"))
+                return JSONObject().put("rule", rule).put("candidate", PlanJson.array(candidate)).put("revision", store.revision())
+            }
+            "automation_save" -> {
+                val (rule, candidate) = prepareAutomation(o.getJSONObject("rule"))
+                store.replace(candidate, o.getLong("revision"), mapOf("automation" to rule.toString()))
+                reconcile("确认周期或脚本计划")
+            }
+            "automation_clear" -> {
+                val previous = store.get("automation").takeIf { it.isNotBlank() }?.let { JSONObject(it) }
+                val prefix = previous?.let { "cycle_${it.getString("id")}_" }
+                store.replace(store.plans().filterNot { prefix != null && it.id.startsWith(prefix) }, o.getLong("revision"), mapOf("automation" to ""))
+                reconcile("移除周期或脚本计划")
+            }
+            "reminder_settings" -> {
+                val values = o.getJSONArray("hours")
+                val hours = ReminderRules.hours((0 until values.length()).map { i ->
+                    val hour = values.get(i)
+                    require(hour is Int) { "提醒时点必须是整数小时" }
+                    hour
+                })
+                store.put("reminderHours", hours.joinToString(","))
+                store.put("reminderEnabled", o.getBoolean("enabled").toString())
+                reminders.reschedule(store.plans())
+            }
+            "reminder_test" -> reminders.test()
             "status" -> reconcile("界面同步")
             "save" -> {
                 val p=PlanJson.read(o.getJSONObject("plan")); val old=store.plans()
