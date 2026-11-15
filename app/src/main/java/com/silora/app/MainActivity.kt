@@ -12,12 +12,12 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import android.content.Intent
 import android.net.Uri
-import android.provider.Settings
 import org.json.JSONObject
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private var imageReply: ((JSONObject)->Unit)?=null
+    private val permissionGuide by lazy { PermissionGuide(this) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WebView.setWebContentsDebuggingEnabled((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0)
@@ -74,21 +74,7 @@ class MainActivity : Activity() {
                             runOnUiThread { if(!isDestroyed)reply.postMessage(response.toString()) }
                         }
                     } else if(action=="permission") {
-                        if (request.getString("permission") == "notifications" && android.os.Build.VERSION.SDK_INT >= 33 &&
-                            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED &&
-                            (!getPreferences(MODE_PRIVATE).getBoolean("notificationAsked", false) || shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS))) {
-                            getPreferences(MODE_PRIVATE).edit().putBoolean("notificationAsked", true).apply()
-                            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 5002)
-                            reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
-                            return@addWebMessageListener
-                        }
-                        val intent=when(request.getString("permission")) {
-                            "exact" -> if(android.os.Build.VERSION.SDK_INT>=31)Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:$packageName")) else Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName"))
-                            "policy" -> Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                            "notifications" -> Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                            else -> throw IllegalArgumentException("未知权限")
-                        }
-                        startActivity(intent)
+                        permissionGuide.open(request.getString("permission"))
                         reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
                     } else Core.executor.execute {
                         val response=JSONObject().put("requestId",requestId)
@@ -116,8 +102,11 @@ class MainActivity : Activity() {
     }
     @Deprecated("Activity back callback for initial target SDK")
     override fun onBackPressed() { web.evaluateJavascript("window.goBack()") { handled -> if (handled != "true") finish() } }
+    override fun onStart() { super.onStart(); permissionGuide.onStart() }
+    override fun onPause() { permissionGuide.onPause(); super.onPause() }
     override fun onResume() {
         super.onResume()
+        permissionGuide.onResume()
         Core.executor.execute {
             try {
                 val core=Core.get(this);core.reconcile("应用恢复")
@@ -148,7 +137,10 @@ class MainActivity : Activity() {
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 5002) web.evaluateJavascript("window.refresh && window.refresh()", null)
+        if (requestCode == 5002) {
+            permissionGuide.onPermissionResult()
+            web.evaluateJavascript("window.refresh && window.refresh()", null)
+        }
     }
-    override fun onDestroy() { web.destroy(); super.onDestroy() }
+    override fun onDestroy() { permissionGuide.destroy(); web.destroy(); super.onDestroy() }
 }

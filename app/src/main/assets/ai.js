@@ -85,10 +85,15 @@ function renderAttachments(images) {
         const preview = document.createElement('img');
         preview.src = image.preview;
         preview.alt = `附件 ${index + 1}`;
-        const remove = el('button', `移除第 ${index + 1} 张`);
+        const remove = el('button', '×', 'attachment-remove');
+        remove.type = 'button';
+        remove.setAttribute('aria-label', `移除第 ${index + 1} 张图片`);
+        remove.title = `移除第 ${index + 1} 张图片`;
         remove.onclick = async () => {
+            remove.disabled = true;
             try { renderAttachments((await native('ai_remove_image', { imageId: image.id })).images); }
             catch (e) { toast(e.message); }
+            finally { remove.disabled = false; }
         };
         item.append(preview, remove);
         $('attachment-list').append(item);
@@ -144,10 +149,6 @@ $('image-pick').onclick = async () => {
     try { const r = await native('ai_image'); if (!r.cancelled) renderAttachments(r.images); }
     catch (e) { toast(e.message); }
 };
-$('image-remove').onclick = async () => {
-    try { renderAttachments((await native('ai_remove_image')).images); }
-    catch (e) { toast(e.message); }
-};
 $('ai-cancel').onclick = () => native('ai_cancel').catch(e => toast(e.message));
 $('chat-clear').onclick = async () => {
     if (!confirm('清除本地 AI 对话及图片附件？课时表、周期规则和已保存计划不受影响。')) return;
@@ -176,7 +177,7 @@ $('send').onclick = async () => {
     const sentImages = attachedImages.slice();
     let delivered = false;
     aiBusy = true; $('send').disabled = true; $('ai-cancel').hidden = false;
-    for (const id of ['image-pick', 'image-remove', 'chat-clear', 'reasoning-save']) $(id).disabled = true;
+    for (const id of ['image-pick', 'chat-clear', 'reasoning-save']) $(id).disabled = true;
     message((text || '请读取这些安排截图。') + (attachedImages.length ? `\n附 ${attachedImages.length} 张图片` : ''), 'user');
     $('prompt').value = '';
     renderAttachments([]);
@@ -221,6 +222,6 @@ $('send').onclick = async () => {
     }
     finally {
         aiBusy = false; $('send').disabled = false; $('ai-cancel').hidden = true;
-        for (const id of ['image-pick', 'image-remove', 'chat-clear', 'reasoning-save']) $(id).disabled = false;
+        for (const id of ['image-pick', 'chat-clear', 'reasoning-save']) $(id).disabled = false;
     }
 };

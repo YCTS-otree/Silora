@@ -6,8 +6,8 @@ android {
         applicationId = "com.silora.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.3.0"
+        versionCode = 6
+        versionName = "1.3.1"
         testInstrumentationRunner = providers.gradleProperty("testRunner").getOrElse("com.silora.app.NativeChecks")
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
