@@ -1,6 +1,7 @@
 'use strict';
 (() => {
     let progress = null, saving = false, checkingKey = false, target = null, frame = 0, resizeTimer = 0;
+    let weekLesson = 0, lastStep = null;
     const main = document.querySelector('main');
     const coach = $('tour-coach'), spotlight = $('tour-spotlight');
     const active = () => progress?.active;
@@ -26,14 +27,19 @@
         });
     }
     function highlight(next) {
-        const changed = target !== next; target = next;
-        if (changed && target && !target.closest('nav')) target.scrollIntoView({ block: target.offsetHeight > main.clientHeight ? 'start' : 'center', behavior: 'instant' });
+        const changed = target !== next; if (changed) target?.classList.remove('tour-target'); target = next; target?.classList.add('tour-target');
+        if (changed && target && !target.closest('nav') && !target.closest('#plans')) {
+            const rect = target.getBoundingClientRect(), viewport = main.getBoundingClientRect();
+            const destination = rect.top - viewport.top + main.scrollTop - Math.max(0, (main.clientHeight - rect.height) / 2);
+            const smooth = target.closest('#settings') && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+            main.scrollTo({ top: Math.max(0, Math.min(destination, main.scrollHeight - main.clientHeight)), behavior: smooth ? 'smooth' : 'instant' });
+        }
         positionSpotlight();
     }
     function keepFocusedVisible() {
         // Android resizes the WebView for the keyboard; keep the focused field
         // inside main rather than underneath the teaching panel.
-        if (active() && target?.contains(document.activeElement)) {
+        if (active() && !target?.closest('#plans') && target?.contains(document.activeElement)) {
             const r = target.getBoundingClientRect(), area = main.getBoundingClientRect();
             if (r.height <= area.height && (r.top < area.top || r.bottom > area.bottom))
                 target.scrollIntoView({ block: 'center', behavior: 'instant' });
@@ -48,6 +54,8 @@
     }
     function paint() {
         if (!progress) return;
+        if (lastStep !== progress.step) { weekLesson = 0; lastStep = progress.step; }
+        window.weekView.setDemo(active() && progress.step === 4 && tab === 'plans');
         const welcome = active() && progress.step === 0, running = active() && progress.step > 0;
         document.body.classList.toggle('tour-welcoming', welcome);
         document.body.classList.toggle('tour-running', running);
@@ -57,9 +65,11 @@
             $('tour-key-entry').hidden = !!state?.apiConfigured;
             $('tour-key-ready').hidden = !state?.apiConfigured;
             $('tour-key-next').disabled = checkingKey || saving || (!state?.apiConfigured && !$('tour-key').value.trim());
+            $('tour-key-later').hidden = checkingKey || saving || !!state?.apiConfigured;
+            $('tour-key-later').textContent = '下一步，先了解本地功能';
             $('tour-key-next').textContent = checkingKey ? '正在验证…' : state?.apiConfigured ? '开始认识静律' : '验证并继续';
         }
-        if (!running) { target = null; spotlight.hidden = true; return; }
+        if (!running) { target?.classList.remove('tour-target'); target = null; spotlight.hidden = true; return; }
         const step = progress.step;
         $('tour-counter').textContent = `认识静律 · ${step} / 7`;
         $('tour-steps').replaceChildren(...steps.slice(1).map((_, i) => el('span', undefined, i < step ? 'done' : '')));
@@ -71,7 +81,7 @@
         let next;
         if (step <= 3 && tab !== 'ai') {
             $('tour-copy').textContent = '先点击底部 AI，回到输入安排的地方。';
-            $('tour-next').disabled = true; next = document.querySelector('[data-tab="ai"]');
+            $('tour-next').disabled = true; $('tour-next').textContent = '↓ 点击「AI」'; next = document.querySelector('[data-tab="ai"]');
         } else if (step === 1) {
             next = $('prompt'); $('tour-action').hidden = false; $('tour-action').textContent = '填入示例';
             $('tour-action').disabled = !!$('prompt').value.trim() || aiBusy;
@@ -82,16 +92,39 @@
             next = aiBusy ? $('ai-progress') : !$('proposal-card').hidden ? $('proposal-card') : $('send');
             if (aiBusy) $('tour-copy').textContent = '消息正在处理，真实进度显示在上方。可以继续了解其他功能，回复仍会正常接收；也可以点击“取消请求”。';
             else if (!$('proposal-card').hidden) $('tour-copy').textContent = '上方是当前真实的待确认方案。请核对日期、模式及替换范围；只有你确认才会启用。可以先继续教学，之后再决定。';
+            const review = ['period-dialog','automation-dialog','json-dialog'].map($).find(d=>d.open);
+            if (review) { next = review; $('tour-copy').textContent = '这里是 AI 的真实结果，核对后再确认；也可取消，继续教学。'; }
         } else if (step === 4) {
-            next = tab === 'plans' ? $('plan-list') : document.querySelector('[data-tab="plans"]');
-            if (tab === 'plans') $('tour-copy').textContent = plans.length ? '每条安排都有时间、模式与执行状态，可编辑、停用或删除。修改前会再次确认；周期规则在上方统一管理。' : '这里目前没有已保存的计划。AI 方案确认后会出现在这里，也可以点“新建”手动安排。之后可编辑、停用或删除。';
+            next = document.querySelector('[data-tab="plans"]');
+            $('tour-next').textContent = '↓ 点击「计划表」';
+            if (tab === 'plans') {
+                $('tour-title').textContent = '一屏看懂这一周';
+                $('tour-next').disabled = saving || weekLesson < 2;
+                if ($('plan-detail').open) {
+                    next = $('plan-detail-card');
+                    $('tour-copy').textContent = '这里有完整时间、模式和状态。点卡片或上方模糊空白处收起，即可下一步。';
+                    $('tour-next').textContent = '收起卡片后继续';
+                } else if (weekLesson < 2) {
+                    next = window.weekView.firstCard();
+                    $('tour-copy').textContent = '示例不会执行。横轴从今天起显示 7 天，纵轴按时间缩放。点开并收起发光卡片，才能下一步。';
+                    $('tour-next').textContent = '↑ 点开示例卡片';
+                } else {
+                    next = $('plan-list');
+                    $('tour-copy').textContent = '卡片操作已完成，可以下一步了。周日会从 Sun 开始；跨月、跨年分组显示，点日期可看当天全部安排。';
+                    $('tour-next').textContent = '下一步';
+                }
+            }
         } else if (step === 5) {
             next = tab === 'settings' ? $('permission-panel') : document.querySelector('[data-tab="settings"]');
+            if (tab !== 'settings') $('tour-next').textContent = '↓ 点击「设置」';
             if (tab === 'settings') $('tour-copy').textContent = '精确闹钟用于按时调度，通知策略访问用于铃声切换；通知权限用于到期提醒。缺少时点对应按钮前往系统授权，返回后会重新检查。';
         } else if (step === 6) {
             next = tab === 'settings' ? $('execution-settings') : document.querySelector('[data-tab="settings"]');
             $('tour-next').disabled = saving || tab !== 'settings';
+            if (tab !== 'settings') $('tour-next').textContent = '↓ 点击「设置」';
         } else if (step === 7) next = tab === 'settings' ? $('tutorial-help-card') : document.querySelector('[data-tab="settings"]');
+        $('tour-next').classList.toggle('guide-action', $('tour-next').disabled && !saving);
+        if (saving) $('tour-next').textContent = '正在保存…';
         highlight(next);
     }
     async function save(step, enabled, completed = false) {
@@ -111,7 +144,7 @@
         finally { saving = false; paint(); }
     }
     async function advance() {
-        if (!active()) return;
+        if (!active() || (progress.step > 0 && $('tour-next').disabled)) return;
         const step = progress.step;
         if (step === 7) { if (await save(7, false, true)) { switchTab('ai'); toast('教学已完成，随时可以在设置中重温'); } }
         else await save(step + 1, true);
@@ -131,13 +164,13 @@
         paint();
     };
     const oldSwitch = switchTab;
-    switchTab = next => { target = null; oldSwitch(next); paint(); };
+    switchTab = next => { target?.classList.remove('tour-target'); target = null; oldSwitch(next); paint(); };
     const oldAttachments = renderAttachments;
     renderAttachments = images => { oldAttachments(images); paint(); };
     const oldBack = window.goBack;
     window.goBack = () => {
+        if (active()) return true;
         if (document.querySelector('dialog[open]')) return oldBack();
-        if (active()) { if (!checkingKey) save(progress.step, false); return true; }
         return oldBack();
     };
     $('tour-pause').onclick = $('tour-welcome-skip').onclick = () => progress && save(progress.step, false);
@@ -177,6 +210,39 @@
         finally { checkingKey = false; $('tour-key').disabled = false; $('tour-welcome-skip').disabled = false; paint(); }
     };
     $('tour-key-later').onclick = advance;
+    // Capture before every application handler; unrelated clicks, touch and keyboard actions are inert.
+    function permitted(node) {
+        if (!active()) return true;
+        if (!(node instanceof Element)) return false;
+        if (progress.step === 0) return ['tour-key','tour-key-toggle','tour-help','tour-key-next','tour-key-later'].some(id => $(id).contains(node));
+        if (progress.step === 3 && ['period-dialog','automation-dialog','json-dialog'].some(id=>$(id).open)) {
+            const top = $('picker-sheet').open ? $('picker-sheet') : $('confirm-sheet').open ? $('confirm-sheet') : target;
+            return !!top?.contains(node);
+        }
+        if ($('confirm-sheet').open && progress.step === 6) return $('confirm-sheet').contains(node);
+        if ($('plan-detail').open && progress.step === 4) return $('plan-detail-card').contains(node) || $('plan-detail-close').contains(node);
+        return $('tour-next').contains(node) || (!$('tour-action').hidden && $('tour-action').contains(node)) || !!target?.contains(node);
+    }
+    const block = event => {
+        if (active() && progress.step === 4 && ['click','pointerdown','mousedown','touchstart'].includes(event.type) && window.weekView.isDetailBackdrop(event)) return;
+        if (!active() || permitted(event.target)) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+    };
+    for (const type of ['click','dblclick','pointerdown','mousedown','touchstart','contextmenu']) window.addEventListener(type, block, {capture:true,passive:false});
+    window.addEventListener('keydown', event => {
+        if (!active()) return;
+        if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); return; }
+        if (event.key === 'Tab') {
+            const choices = [...document.querySelectorAll('button,input,textarea,select,[tabindex="0"]')].filter(e => permitted(e) && !e.disabled && e.getClientRects().length && !e.closest('[hidden]'));
+            if (choices.length) { const i = choices.indexOf(document.activeElement); choices[(i + (event.shiftKey ? -1 : 1) + choices.length) % choices.length].focus(); }
+            event.preventDefault(); event.stopImmediatePropagation(); return;
+        }
+        block(event);
+    },true);
+    window.addEventListener('focusin',event=>{if(active()&&!permitted(event.target))event.target.blur();},true);
+    document.addEventListener('week-card-open',event=>{if(active()&&progress.step===4&&event.detail.demo){weekLesson=1;paint();}});
+    document.addEventListener('week-card-close',event=>{if(active()&&progress.step===4&&event.detail.demo&&weekLesson===1){weekLesson=2;paint();}});
+    document.addEventListener('week-layout',()=>{if(active()&&progress.step===4)paint();});
     main.addEventListener('scroll', positionSpotlight, { passive: true });
     window.addEventListener('resize', resized);
     window.visualViewport?.addEventListener('resize', resized);
@@ -184,6 +250,6 @@
     // Observe actual result/progress changes; never synthesize a response or confirm a plan.
     new MutationObserver(() => { if (active() && progress.step === 3) paint(); }).observe($('ai-progress'), { childList: true, attributes: true, characterData: true, subtree: true });
     new MutationObserver(() => { if (active() && progress.step === 3) paint(); }).observe($('proposal-card'), { childList: true, attributes: true });
-    document.querySelectorAll('dialog').forEach(d => new MutationObserver(positionSpotlight).observe(d, { attributes: true, attributeFilter: ['open'] }));
+    document.querySelectorAll('dialog').forEach(d => new MutationObserver(() => { if (active() && progress.step === 3) paint(); else positionSpotlight(); }).observe(d, { attributes: true, attributeFilter: ['open'] }));
     if (state) window.nativeUpdate(state);
 })();

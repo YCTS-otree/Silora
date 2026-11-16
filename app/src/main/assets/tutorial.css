@@ -14,3 +14,12 @@ body.tour-running nav{position:relative;z-index:21}#tour-spotlight{position:fixe
 body.tour-running main{scroll-behavior:auto}
 @media(min-width:650px){.tour-welcome{padding:24px 40px}.tour-coach{padding-inline:28px}}
 @media(max-height:550px){.tour-coach{max-height:40%;padding:4px 14px 10px}.tour-coach h2{font-size:16px;margin-top:4px}.tour-coach p{font-size:12px;margin:4px 0 8px}.tour-steps{display:none}.tour-emblem{margin:10px auto;width:48px;height:48px;font-size:34px}}
+
+body.tour-running #tour-prev,body.tour-running #tour-pause,body.tour-welcoming #tour-welcome-skip{display:none}
+#tour-spotlight::after{content:'';position:absolute;inset:-2px;border-radius:inherit;border:2px solid var(--accent);pointer-events:none;animation:tour-breathe 1.8s ease-in-out infinite}
+dialog.tour-target[open],dialog[open] .tour-target{outline:2px solid var(--accent);outline-offset:3px;animation:tour-breathe 1.8s ease-in-out infinite}
+@keyframes tour-breathe{0%,100%{box-shadow:0 0 8px 2px var(--glow);border-color:var(--accent)}50%{box-shadow:0 0 24px 7px var(--accent);border-color:var(--strong)}}
+@media(prefers-reduced-motion:reduce){#tour-spotlight::after,dialog.tour-target[open],dialog[open] .tour-target{animation:none;box-shadow:0 0 14px 3px var(--glow)}}
+
+body.tour-running #tour-coach{z-index:23}#tour-spotlight{z-index:22}
+#tour-next.guide-action{background:transparent;border:1px dashed var(--accent);color:var(--accent);opacity:1;font-weight:500;cursor:default}
