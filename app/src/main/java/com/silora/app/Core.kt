@@ -59,8 +59,8 @@ class Core private constructor(private val context: Context) {
                     audio.ringerMode=decision.target
                     succeeded=audio.ringerMode==decision.target
                     store.put("issue",if(succeeded) "" else "系统未接受铃声模式修改")
-                } catch(e: SecurityException) { succeeded=false;store.put("issue","系统拒绝铃声修改，请检查通知策略访问权限") }
-                catch(e: RuntimeException) { succeeded=false;store.put("issue","当前设备无法修改铃声模式") }
+                } catch(e: SecurityException) { AppLog.exception("ringer_set", e);succeeded=false;store.put("issue","系统拒绝铃声修改，请检查通知策略访问权限") }
+                catch(e: RuntimeException) { AppLog.exception("ringer_set", e);succeeded=false;store.put("issue","当前设备无法修改铃声模式") }
             }
         } else store.put("issue","")
         if(succeeded) {
@@ -79,6 +79,7 @@ class Core private constructor(private val context: Context) {
         schedule(plans,now)
         reminders.reschedule(plans, now)
         store.put("lastSync",reason)
+        AppLog.record("reconcile revision=${store.revision()} plans=${plans.size} active=${active != null} before=$actual target=${decision.target} actual=${audio.ringerMode} success=$succeeded exact=${exact()} policy=${policy()} scheduled=${store.get("alarm").isNotEmpty()}")
     }
 
     private fun schedule(plans: List<Plan>, now: Long) {
@@ -93,7 +94,8 @@ class Core private constructor(private val context: Context) {
             // Persist first so a delivered event always has an identity to validate.
             store.put("alarm",token)
             alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,next!!,pending(token))
-        } catch(e: SecurityException) { store.put("alarm","");store.put("issue","精确闹钟权限已撤销，请重新授权") }
+            if (token != old) AppLog.record("alarm_scheduled next=$next revision=${store.revision()}")
+        } catch(e: SecurityException) { AppLog.exception("alarm_schedule", e);store.put("alarm","");store.put("issue","精确闹钟权限已撤销，请重新授权") }
     }
 
     fun snapshot(): JSONObject = JSONObject().put("revision",store.revision()).put("plans",PlanJson.array(store.plans()))
@@ -102,7 +104,8 @@ class Core private constructor(private val context: Context) {
         .put("activeId",store.state().activeId).put("suppressed",store.state().suppressed)
         .put("issue",store.get("issue")).put("restore",store.get("restore","previous"))
         .put("manual",store.get("manual","respect")).put("zone",ZoneId.systemDefault().id)
-        .put("events",store.events()).put("version","1.4.0").put("apiConfigured",KeyVault(context).configured())
+        .put("events",store.events()).put("version",BuildConfig.VERSION_NAME).put("apiConfigured",KeyVault(context).configured())
+        .put("logging", AppLog.snapshot())
         .put("tutorial", TutorialState(context).snapshot())
         .put("reasoningEffort", AiConfig.effort(context))
         .put("periodTable", store.get("periodTable").takeIf { it.isNotBlank() }?.let { JSONObject(it) })

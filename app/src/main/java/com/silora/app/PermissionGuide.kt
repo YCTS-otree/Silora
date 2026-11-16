@@ -34,6 +34,7 @@ class PermissionGuide(private val activity: Activity) {
         if (checked || dialog != null || activity.isFinishing) return
         checked = true
         val needed = missing()
+        AppLog.record("permission_check missing=${needed.joinToString(",")}")
         if (needed.isEmpty()) return
         dialog = AlertDialog.Builder(activity).setTitle("先完成权限设置")
             .setMessage("静律还需要以下权限：\n\n" + needed.joinToString("\n\n") { labels.getValue(it) } + "\n\n点击开始后将逐项打开系统授权页面，返回静律会自动检查结果。")
@@ -52,6 +53,7 @@ class PermissionGuide(private val activity: Activity) {
     }
     private fun finishStep() {
         val kind = awaiting ?: return
+        AppLog.record("permission_return kind=$kind granted=${granted(kind)}")
         awaiting = null; leftActivity = false
         if (granted(kind)) advance()
         else showIncomplete("尚未获得${labels.getValue(kind)}。对应功能暂不可用；可稍后在静律的设置中继续授权。")
@@ -62,6 +64,7 @@ class PermissionGuide(private val activity: Activity) {
     }
     fun onPermissionResult() { if (awaiting == "notifications") finishStep() }
     fun open(kind: String) {
+        AppLog.record("permission_open kind=${kind.takeIf { it in labels } ?: "unknown"}")
         if (kind == "notifications" && Build.VERSION.SDK_INT >= 33 &&
             activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
             (!activity.getPreferences(Activity.MODE_PRIVATE).getBoolean("notificationAsked", false) || activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS))) {

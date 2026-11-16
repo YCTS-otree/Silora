@@ -60,7 +60,7 @@ class RenewalReminders(private val context: Context, private val store: PlanStor
         }
     }
     private fun notify(title: String, text: String): Boolean {
-        if (!allowed()) return false
+        if (!allowed()) { AppLog.record("notification blocked"); return false }
         val open = PendingIntent.getActivity(context, 2,
             Intent(context, MainActivity::class.java).putExtra("renewal", true),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -68,8 +68,9 @@ class RenewalReminders(private val context: Context, private val store: PlanStor
             notifications.notify(ID, Notification.Builder(context, CHANNEL).setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title).setContentText(text).setStyle(Notification.BigTextStyle().bigText(text))
                 .setContentIntent(open).setAutoCancel(true).build())
+            AppLog.record("notification delivered")
             true
-        } catch (e: SecurityException) { false }
+        } catch (e: SecurityException) { AppLog.exception("notification", e); false }
     }
     fun test() { check(notify("静律通知测试", "通知已开启。正式到期提醒仅在白天、当期计划结束前 24 小时内发送。")) { "请先允许通知，并开启计划到期提醒通知渠道" } }
     fun snapshot() = JSONObject().put("enabled", enabled()).put("allowed", allowed()).put("hours", org.json.JSONArray(hours()))

@@ -11,9 +11,16 @@ import android.os.Build
 class SiloraApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        AppLog.initialize(this)
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            runCatching { AppLog.exception("uncaught", error); AppLog.flush() }
+            if (previous != null) previous.uncaughtException(thread, error)
+            else { android.os.Process.killProcess(android.os.Process.myPid()); kotlin.system.exitProcess(1) }
+        }
         val receiver=object: BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                Core.executor.execute { try { Core.get(context).reconcile("系统铃声变化") } catch(e: Exception) { android.util.Log.e("Silora","状态同步失败",e) } }
+                Core.executor.execute { try { Core.get(context).reconcile("系统铃声变化") } catch(e: Exception) { AppLog.exception("ringer_broadcast", e) } }
             }
         }
         val filter=IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION)

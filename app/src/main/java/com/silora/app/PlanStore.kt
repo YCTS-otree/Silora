@@ -53,6 +53,8 @@ class PlanStore(context: Context, databaseName: String = "silora.db") : SQLiteOp
     }
     fun state(s: RunState) { put("runtime",JSONObject().put("session",s.session).put("before",s.before).put("expected",s.expected).put("suppressed",s.suppressed).put("activeId",s.activeId).toString()) }
     fun log(plan: String?, result: String, detail: String, actual: Int) {
+        val safeResult = result.takeIf { it in setOf("ignored", "ended", "manual", "applied", "preserved", "restored", "failed") } ?: "other"
+        AppLog.record("execution result=$safeResult actual=$actual revision=${revision()}")
         writableDatabase.insertOrThrow("events",null,ContentValues().apply { put("at",System.currentTimeMillis());put("plan",plan);put("revision",revision());put("result",result);put("detail",detail);put("actual",actual) })
         writableDatabase.execSQL("DELETE FROM events WHERE seq <= (SELECT MAX(seq)-500 FROM events)")
     }

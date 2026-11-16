@@ -64,6 +64,7 @@ class DeepSeek private constructor(private val context: Context) {
         } finally { bitmap.recycle() }
     }
     private fun request(path:String,key:String,body:JSONObject?=null,progress:((String)->Unit)?=null):JSONObject {
+        val began = android.os.SystemClock.elapsedRealtime()
         check(!cancelled) { "请求已取消" }
         val builder=Request.Builder().url("https://api.deepseek.com$path").header("Authorization","Bearer $key")
         if(body!=null)builder.post(body.toString().toRequestBody("application/json".toMediaType()))
@@ -74,6 +75,7 @@ class DeepSeek private constructor(private val context: Context) {
         if(cancelled)active.cancel()
         try {
             active.execute().use { response ->
+                AppLog.record("deepseek endpoint=${if (body == null) "balance" else "chat"} http=${response.code} elapsed_ms=${android.os.SystemClock.elapsedRealtime() - began}")
                 if(!response.isSuccessful)throw IllegalStateException(when(response.code) {
                     401->"API Key 无效（401）";402->"余额不足（402）";429->"请求过于频繁，请稍后重试（429）"
                     in 500..599->"DeepSeek 服务暂不可用（${response.code}）";else->"DeepSeek 请求失败（${response.code}）"
@@ -83,7 +85,7 @@ class DeepSeek private constructor(private val context: Context) {
                 require(!source.request(2_000_001)) { "API 响应过大，已拒绝处理" }
                 return JSONObject(source.readUtf8())
             }
-        } catch(e:IOException) { throw IllegalStateException(if(cancelled)"请求已取消" else "网络不可用或请求超时，请检查连接后重试") }
+        } catch(e:IOException) { AppLog.exception("deepseek_network", e);throw IllegalStateException(if(cancelled)"请求已取消" else "网络不可用或请求超时，请检查连接后重试") }
         finally { call=null }
     }
     private fun history():JSONArray = try { JSONArray(prefs.getString("history","[]")) } catch(e:Exception){JSONArray()}
