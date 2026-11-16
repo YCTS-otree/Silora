@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
-    <application android:name=".SiloraApplication" android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@drawable/ic_launcher" android:label="${appLabel}" android:theme="@style/AppTheme" android:usesCleartextTraffic="false" android:supportsRtl="true">
+    <application android:name=".SiloraApplication" android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@drawable/silora_logo" android:label="${appLabel}" android:theme="@style/AppTheme" android:usesCleartextTraffic="false" android:supportsRtl="true">
         <service android:name=".GuardService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-enabled ongoing ringer schedule protection with visible notification and stop action; supplements exact alarms and observes ringer changes without wake locks."/>
         </service>

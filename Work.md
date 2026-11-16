@@ -1,3 +1,7 @@
+## 正式品牌与开源发布：v1.7.1
+
+月铃原图作为正式 Logo 与 Android 应用图标。项目采用 GPL-3.0-only，公开仓库为 https://github.com/YCTS-otree/Silora 。本版本保留 v1.7.0 的功能与交互。
+
 # Silora（静律）Android APP 开发任务
 
 ## 当前交付范围：v1.7.0（2026-11-16）
