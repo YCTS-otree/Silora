@@ -80,15 +80,16 @@ $('period-form').onsubmit = async e => {
         start: row.querySelector('[data-key="start"]').value,
         end: row.querySelector('[data-key="end"]').value
     }));
-    if (!confirm('确认保存课时表？已有课时表会被覆盖，已确认的铃声计划不变。')) return;
+    if (!await askConfirm('确认保存课时表？已有课时表会被覆盖，已确认的铃声计划不变。')) return;
     if (await mutate('period_save', { periodVersion: periodEditVersion,
         table: { name: $('period-name').value.trim(), time_zone: $('period-zone').value.trim(), periods } })) {
         $('period-dialog').close(); toast('课时表已保存，后续 AI 会自动引用');
     }
 };
 $('period-remove').onclick = async () => {
-    if (state?.periodTable && confirm('删除保存的课时表？已确认计划仍继续执行。'))
-        await mutate('period_clear', { periodVersion: state.periodVersion });
+    const periodVersion = state?.periodVersion;
+    if (state?.periodTable && await askConfirm('删除保存的课时表？已确认计划仍继续执行。'))
+        await mutate('period_clear', { periodVersion });
 };
 $('period-ai').onclick = () => {
     switchTab('ai'); $('prompt').value = '请识别我上传的课时表，提取各节上下课时间并保存，缺少信息请追问。';
@@ -166,14 +167,15 @@ $('automation-kind').onchange = automationType;
 $('automation-form').oninput = invalidateAutomation;
 $('automation-form').onsubmit = e => { e.preventDefault(); previewAutomation(); };
 $('automation-apply').onclick = async () => {
-    if (!automationDraft || !confirm('确认应用周期 / 脚本计划？将替换原周期生成的所有时间段，保留手动计划，并真实执行铃声切换。')) return;
+    if (!automationDraft || !await askConfirm('确认应用周期 / 脚本计划？将替换原周期生成的所有时间段，保留手动计划，并真实执行铃声切换。')) return;
     if (await mutate('automation_save', { rule: automationDraft, revision: automationRevision })) {
         $('automation-dialog').close(); switchTab('plans'); toast('已展开并保存，本学期无需每周重新设置');
     }
 };
 $('automation-remove').onclick = async () => {
-    if (state?.automation && confirm('移除当前周期 / 脚本及其全部时间段？手动计划会保留。'))
-        await mutate('automation_clear', { revision: state.revision });
+    const revision = state?.revision;
+    if (state?.automation && await askConfirm('移除当前周期 / 脚本及其全部时间段？手动计划会保留。'))
+        await mutate('automation_clear', { revision });
 };
 $('automation-ai').onclick = () => {
     switchTab('ai');

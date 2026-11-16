@@ -6,13 +6,21 @@ android {
         applicationId = "com.silora.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 8
-        versionName = "1.5.0"
+        versionCode = 9
+        versionName = "1.6.0"
+        manifestPlaceholders["appLabel"] = "静律"
         testInstrumentationRunner = providers.gradleProperty("testRunner").getOrElse("com.silora.app.NativeChecks")
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { buildConfig = true }
+    // Opt-in isolated device validation: separate Android UID, database and credentials.
+    buildTypes.getByName("debug") {
+        if (providers.gradleProperty("deviceCheckBuild").orNull == "true") {
+            applicationIdSuffix = ".devicecheck"
+            manifestPlaceholders["appLabel"] = "静律验证"
+        }
+    }
 }
 layout.buildDirectory.set(rootProject.file("Temp/build/app"))
 dependencies {

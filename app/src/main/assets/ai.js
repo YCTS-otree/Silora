@@ -141,7 +141,7 @@ $('reasoning-save').onclick = async () => {
     finally { button.disabled = false; }
 };
 $('key-delete').onclick = async () => {
-    if (!confirm('删除 API Key？已确认的计划仍会继续执行。')) return;
+    if (!await askConfirm('删除 API Key？已确认的计划仍会继续执行。')) return;
     try { await native('ai_delete'); await refresh(); toast('已删除 Key'); }
     catch (e) { toast(e.message); }
 };
@@ -151,7 +151,7 @@ $('image-pick').onclick = async () => {
 };
 $('ai-cancel').onclick = () => native('ai_cancel').catch(e => toast(e.message));
 $('chat-clear').onclick = async () => {
-    if (!confirm('清除本地 AI 对话及图片附件？课时表、周期规则和已保存计划不受影响。')) return;
+    if (!await askConfirm('清除本地 AI 对话及图片附件？课时表、周期规则和已保存计划不受影响。')) return;
     try { await native('ai_clear'); $('messages').replaceChildren(); renderAttachments([]); await refresh(); $('ai-progress').hidden = true; }
     catch (e) { toast(e.message); }
 };

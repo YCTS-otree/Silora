@@ -7,6 +7,7 @@ import android.content.Intent
 class ScheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val result=goAsync()
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) GuardService.ensureStarted(context)
         Core.executor.execute {
             try {
                 val core=Core.get(context)

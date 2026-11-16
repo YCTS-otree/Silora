@@ -1,13 +1,13 @@
 # Silora · 静律
 
-**v1.5.0**：新增默认启用的私有诊断日志与手动 ZIP 导出；支持可跳过、可继续、可重温的交互式新手教学；可见发送状态、保留图片上下文、先给方案后确认；支持课时表、单双周、本地脚本和到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
+**v1.6.0**：新增主题日期 / 时间和确认弹层、可选后台守护；保留私有诊断日志与手动 ZIP 导出；支持可跳过、可继续、可重温的交互式新手教学；可见发送状态、保留图片上下文、先给方案后确认；支持课时表、单双周、本地脚本和到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
 
 ## 已实现
 
 - SQLite 持久化计划、执行状态、策略与最近 500 条执行记录；事务更新与乐观版本检查。
 - 手动新增、编辑、删除、启停，跨日绝对时间，JSON 导入预览 / 确认 / 导出。
 - 严格 JSON 语法、字段、UTC 偏移、时间范围、重复及冲突校验。区间采用 `[start,end)`。
-- AlarmManager `setExactAndAllowWhileIdle` 安排下一个边界，广播接收器重新计算当前状态；不靠 WebView、轮询或常驻服务执行。
+- AlarmManager `setExactAndAllowWhileIdle` 安排下一个边界，广播接收器重新计算当前状态；不依赖 WebView 或轮询；可选前台守护服务补充进程保护和单个边界定时回调。
 - 每个闹钟关联计划集合版本、计划 ID 和时间标识；旧事件 / 重复事件失效。重启、升级、时间 / 时区变化及授权恢复后重新调度，绝对时间不平移。
 - AudioManager 真实切换响铃 / 振动 / 静音并读取实际结果；连续区间不错误恢复。支持结束恢复策略、尊重外部修改 / 下一节点恢复 / 自动计划优先。
 - 精确闹钟、通知策略访问的状态显示和系统设置入口；未获权限时明确显示不可用。
@@ -16,6 +16,38 @@
 - 本地对话保留最近 12 条消息，待发图片位于进程内存，点击发送立即清空输入框；成功发送的图片进入应用私有对话目录，与输入框分离。最近 12 条历史中的最多 6 张、合计 16 MB 图片随续聊重新提供给模型，重开应用后仍可引用；超出保留范围或清除对话时删除。失败或取消恢复待发附件。PNG 处理最长边 2560 像素、每张最多 8 MB；最多 6 张、合计最多 16 MB，保留文字清晰度；大图建议裁剪。
 
 首次从上传图片识别出的有效课时表会自动保存；已有课时表的覆盖需确认。候选铃声计划必须经过原生校验及明确确认。旧版 Demo 的 localStorage 演示记录不会自动迁移为可执行计划。
+
+## 时间弹层与后台守护（v1.6.0）
+
+手动计划和课时表 / 周期日期时间统一使用主题弹层：月历、24 小时直接输入、小时 / 分钟加减、快捷分钟。取消和返回键不改原值；跨天与无效日期仍严格校验。确认保存展示名称、起止日期时间、铃声模式和时区，允许返回修改；删除、覆盖、清除等确认也使用主题弹层。确认前捕获版本，后台数据变化时由原生版本检查拒绝旧操作。
+
+设置 → 后台守护 → 开启后台守护。默认关闭，开启后使用低优先级常驻通知，可在通知中关闭；保存的计划继续由精确闹钟执行。服务使用 START_STICKY 和 stopWithTask=false，活动恢复 / 开机时按用户设置启动；无 WakeLock、无循环轮询，仅为下一个时间边界安排一次内存回调。系统休眠仍依靠 AlarmManager 唤醒。相同进程内的重复同步不反复撤销同一闹钟，冷启动会重新注册。
+
+界面展示系统报告的后台限制、电池优化豁免及通知状态，提供电池优化和应用详情入口。请在手机管家中允许自启动与后台活动，必要时锁定最近任务。系统接口的“未报告限制”不代表厂商没有额外限制。前台服务不能保证绕过厂商清理；系统“强行停止”后需重新打开。部分设备会把划掉最近任务也处理为停止应用，这种情况同样需要系统侧放行。参考 [前台服务类型](https://developer.android.com/develop/background-work/services/fgs/service-types)、[定时调度](https://developer.android.com/develop/background-work/services/alarms) 和 [停止状态限制](https://developer.android.com/about/versions/15/behavior-changes-all#stopped-state)。本版使用 specialUse 类型；未来上架 Google Play 时需按平台要求声明用途并审核。
+
+新增守护生命周期、最近进程退出的时间 / 原因码 / 重要性日志，不记录系统退出描述或用户正文。本轮提供的 Android 17 日志中，14:38 节点没有收到闹钟广播，14:56:43 重新打开后才补执行；旧日志不足以判断具体清理原因。
+
+独立真机验证安装（仅用于测试，包名 com.silora.app.devicecheck，名称“静律验证”，不访问正式安装的数据 / Key）：
+
+```powershell
+gradle --offline --project-cache-dir Temp/gradle-project -PdeviceCheckBuild=true :app:assembleDebug
+adb install -r Temp/build/app/outputs/apk/debug/app-debug.apk
+adb shell am start -n com.silora.app.devicecheck/com.silora.app.MainActivity
+# 在测试安装中授权并启用守护，测试会真实改变手机铃声。
+node tests/guard-device.mjs setup
+# 退到后台或进行待验证的清理，再观察约 3 分钟。
+node tests/guard-device.mjs monitor
+# 验证结束后卸载测试安装；分发前不带 deviceCheckBuild 重新构建。
+```
+
+`tests/dialogs-smoke.mjs` 通过已转发的 WebView 调试端口验证弹层；先暂停教学、确保无待编辑表单。保存操作使用模拟桥接，不写用户计划；验证结束比较计划版本、课时表版本和待确认方案。界面检查使用真机双主题截图和真实数字键盘。
+
+本轮验证：43 项 JVM 测试、16 项弹层检查、原输入框 / 教学回归通过；隔离安装的 14 项 Android JSON / SQLite 检查及 7 项前台服务 / 通知关闭检查通过。Lint 0 错误、6 提示。正式安装原有计划版本 45、课时表版本 13、待确认方案和配置保留，测试安装已移除。
+
+Android 12 华为 CET-AL00：退到后台并锁屏后，15:21:28 振动、15:22:43 静音、15:23:58 恢复响铃成功，守护持续为前台服务；通知关闭后服务停止，重复启动只保留一条通知。另一轮划掉最近任务后，系统将测试包设为 stopped=true，服务和闹钟均被清除，未能在节点切换。该设备的清理问题不能宣称已由前台服务修复；需要系统侧允许后台活动 / 自启动并避免将任务清成停止状态。未完成厂商自动省电清理、系统回收后的 START_STICKY 重启、开机恢复、长时深度休眠及 Android 14–17 实机验证。
+
+守护原生检查使用 `-PdeviceCheckBuild=true '-PtestRunner=com.silora.app.GuardChecks' :app:assembleDebugAndroidTest`，安装测试 APK 后运行 `adb shell am instrument -w com.silora.app.devicecheck.test/com.silora.app.GuardChecks`。该入口拒绝正式包名，避免测试误改用户安装。
+
 
 ## 私有日志与主动导出（v1.5.0）
 
@@ -80,7 +112,7 @@
 
 ```powershell
 .\gradlew.bat --project-cache-dir Temp/gradle-project :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-adb install -r Release/v1.5.0/Silora-v1.5.0-debug.apk
+adb install -r Release/v1.6.0/Silora-v1.6.0-debug.apk
 adb shell am start -n com.silora.app/.MainActivity
 ```
 
@@ -182,7 +214,7 @@ JSON 支持 add、按 scope replace（空 intervals 可清空范围）；按 ID 
 
 ## 实际限制与后续工作
 
-本版完成原生核心、AI 接入与课表规则扩展，**不是 Work.md 的全部 MVP 验收完成**：完整首次启动交互教学、周视图、间隔合并、缺失下周计划策略、网络校时尚未实现。JSON 导入导出目前通过文本框粘贴 / 复制。
+本版完成原生核心、AI 接入与课表规则扩展，**不是 Work.md 的全部 MVP 验收完成**：周视图、间隔合并、缺失下周计划策略、网络校时尚未实现。JSON 导入导出目前通过文本框粘贴 / 复制。
 
 尚未完成实机重启、长期深度休眠、厂商后台限制、Android 10–11 / 13–17、横屏大字体、WebView 进程故障、全部网络错误场景验证。重启 / 时区恢复分支已实现，但不能把模拟或代码检查当作实机验证。
 
@@ -190,4 +222,4 @@ Android 12+ 需要精确闹钟授权，Android 14 新装应用常默认无此授
 
 外部修改检测依赖实际模式与应用预期模式比较。进程不在时无法持续检测，更不能可靠识别是谁改的；若模式改动后又回到相同值，可能无法观察到。AI 网络失败不会影响已保存计划。网络失败不自动重发收费请求，避免重复消耗，可手动重试。
 
-APK 大小通过 `Get-Item Release/v1.3.1/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。
+APK 大小通过 `Get-Item Release/v1.6.0/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。

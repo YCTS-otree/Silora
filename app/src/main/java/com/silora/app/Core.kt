@@ -19,11 +19,13 @@ class Core private constructor(private val context: Context) {
     private val audio=context.getSystemService(AudioManager::class.java)
     private val alarms=context.getSystemService(AlarmManager::class.java)
     private val notifications=context.getSystemService(NotificationManager::class.java)
+    private var registeredAlarm: String? = null
     fun exact()=Build.VERSION.SDK_INT<31 || alarms.canScheduleExactAlarms()
     fun policy()=notifications.isNotificationPolicyAccessGranted
     private fun pending(token: String)=PendingIntent.getBroadcast(context,0,
         Intent(context,ScheduleReceiver::class.java).setAction("com.silora.app.ALARM").setData(Uri.parse("silora://schedule/$token")),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun invalidateAlarm() {
+        registeredAlarm = null
         val token=store.get("alarm")
         if(token.isNotEmpty()) { val p=pending(token);alarms.cancel(p);p.cancel() }
         store.put("alarm","")
@@ -78,6 +80,7 @@ class Core private constructor(private val context: Context) {
         }
         schedule(plans,now)
         reminders.reschedule(plans, now)
+        GuardService.boundary(store.get("next").toLongOrNull())
         store.put("lastSync",reason)
         AppLog.record("reconcile revision=${store.revision()} plans=${plans.size} active=${active != null} before=$actual target=${decision.target} actual=${audio.ringerMode} success=$succeeded exact=${exact()} policy=${policy()} scheduled=${store.get("alarm").isNotEmpty()}")
     }
@@ -87,6 +90,8 @@ class Core private constructor(private val context: Context) {
         val planId=next?.let { time -> plans.first { it.enabled && (it.start==time || it.end==time) }.id }
         val token=if(next!=null && exact()) "${store.revision()}_${next}_$planId" else ""
         val old=store.get("alarm")
+        if (token.isNotEmpty() && token == old && token == registeredAlarm) return
+        registeredAlarm = null
         if(old.isNotEmpty()) { val p=pending(old);alarms.cancel(p);p.cancel() }
         store.put("alarm","");store.put("next",next?.toString().orEmpty())
         if(token.isEmpty())return
@@ -94,6 +99,7 @@ class Core private constructor(private val context: Context) {
             // Persist first so a delivered event always has an identity to validate.
             store.put("alarm",token)
             alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,next!!,pending(token))
+            registeredAlarm = token
             if (token != old) AppLog.record("alarm_scheduled next=$next revision=${store.revision()}")
         } catch(e: SecurityException) { AppLog.exception("alarm_schedule", e);store.put("alarm","");store.put("issue","精确闹钟权限已撤销，请重新授权") }
     }
@@ -106,6 +112,7 @@ class Core private constructor(private val context: Context) {
         .put("manual",store.get("manual","respect")).put("zone",ZoneId.systemDefault().id)
         .put("events",store.events()).put("version",BuildConfig.VERSION_NAME).put("apiConfigured",KeyVault(context).configured())
         .put("logging", AppLog.snapshot())
+        .put("guard", GuardService.snapshot(context))
         .put("tutorial", TutorialState(context).snapshot())
         .put("reasoningEffort", AiConfig.effort(context))
         .put("periodTable", store.get("periodTable").takeIf { it.isNotBlank() }?.let { JSONObject(it) })

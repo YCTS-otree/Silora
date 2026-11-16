@@ -79,6 +79,15 @@ class MainActivity : Activity() {
                             finally { DeepSeek.busy.set(false) }
                             runOnUiThread { if(!isDestroyed)reply.postMessage(response.toString()) }
                         }
+                    } else if(action=="guard_set") {
+                        val enabled = request.get("enabled"); require(enabled is Boolean)
+                        GuardService.setEnabled(this, enabled)
+                        reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",GuardService.snapshot(this)).toString())
+                    } else if(action=="background_settings") {
+                        val intent = if (request.optString("kind") == "battery") Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                            else Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                        startActivity(intent)
+                        reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
                     } else if(action=="log_status") {
                         reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",AppLog.snapshot()).toString())
                     } else if(action=="log_export") {
@@ -125,6 +134,7 @@ class MainActivity : Activity() {
     override fun onPause() { permissionGuide.onPause(); super.onPause() }
     override fun onResume() {
         super.onResume()
+        GuardService.ensureStarted(this)
         permissionGuide.onResume()
         Core.executor.execute {
             try {

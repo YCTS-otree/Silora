@@ -12,6 +12,13 @@ class SiloraApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         AppLog.initialize(this)
+        if (Build.VERSION.SDK_INT >= 30) {
+            runCatching {
+                getSystemService(android.app.ActivityManager::class.java).getHistoricalProcessExitReasons(null, 0, 3).forEach {
+                    AppLog.record("previous_exit time=${it.timestamp} reason=${it.reason} importance=${it.importance}")
+                }
+            }.onFailure { AppLog.exception("exit_history", it) }
+        }
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             runCatching { AppLog.exception("uncaught", error); AppLog.flush() }
