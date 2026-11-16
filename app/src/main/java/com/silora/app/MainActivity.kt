@@ -15,6 +15,7 @@ import android.net.Uri
 import org.json.JSONObject
 
 class MainActivity : Activity() {
+    companion object { private var supportCounted=false }
     private lateinit var web: WebView
     private var imageReply: ((JSONObject)->Unit)?=null
     private var logPickerOpen = false
@@ -55,7 +56,14 @@ class MainActivity : Activity() {
                     StrictJson.validate(raw)
                     val request=JSONObject(raw);requestId=request.getString("requestId")
                     val action=request.getString("action")
-                    if(action=="ai_cancel") {
+                    if(action=="support_start") {
+                        var due=false
+                        if(!supportCounted) { supportCounted=true; val prefs=getSharedPreferences("support", MODE_PRIVATE); val n=prefs.getInt("opens",0)+1; prefs.edit().putInt("opens",n).apply(); due=n%5==0 }
+                        reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject().put("due",due)).toString())
+                    } else if(action=="support_bilibili") {
+                        startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://space.bilibili.com/668497683")))
+                        reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
+                    } else if(action=="ai_cancel") {
                         DeepSeek.get(this).cancel()
                         AppLog.operation(action, true)
                         reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())

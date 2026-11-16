@@ -1,0 +1,2 @@
+#support-dialog,#sponsor-dialog{inset:0;margin:auto;max-height:85dvh;width:calc(100% - 40px);max-width:420px}.support-dismiss{display:flex;justify-content:flex-end;margin-top:16px}.support-codes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.support-codes figure{margin:0;text-align:center}.support-codes svg{width:100%;background:white;display:block}.support-codes figcaption{margin:12px 0}
+#sponsor-close{display:block;margin:18px 0 0 auto}
