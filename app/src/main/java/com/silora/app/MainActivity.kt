@@ -116,7 +116,7 @@ class MainActivity : Activity() {
                         reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
                     } else Core.executor.execute {
                         val response=JSONObject().put("requestId",requestId)
-                        try { response.put("ok",true).put("data",Core.get(this).command(request));AppLog.operation(action, true) }
+                        try { response.put("ok",true).put("data",Core.get(this).command(request)); if(action == "status") UsageReporter.onUiReady(this); AppLog.operation(action, true) }
                         catch(e: Exception) { AppLog.operation(action, false);AppLog.exception("core_command", e);response.put("ok",false).put("error",e.message ?: "原生操作失败") }
                         runOnUiThread { if(!isDestroyed)reply.postMessage(response.toString()) }
                     }

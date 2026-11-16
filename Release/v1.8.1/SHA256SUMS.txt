@@ -1,1 +1,1 @@
-cf454aee7368acb312517c8a27e54664e0b1cfcfbc40006649cc70dd4e5a1852  Silora-v1.8.1-debug.apk
+c97b670deabc92b2bfcbdf37ef4e2b9a2c960fcea64f0f7894f2d7cb4179d90b  Silora-v1.8.1-debug.apk
