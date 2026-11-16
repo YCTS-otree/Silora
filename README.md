@@ -2,7 +2,7 @@
 
 # Silora · 静律
 
-**v1.8.0**：采用正式月铃 Logo，以 GPL-3.0-only 开源。新增高密度滚动七日计划表、示例表教学与严格交互指引；保留主题日期 / 时间和确认弹层、可选后台守护；保留私有诊断日志与手动 ZIP 导出；支持进度恢复和重温的交互式新手教学；可见发送状态、保留图片上下文、先给方案后确认；支持课时表、单双周、本地脚本和到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
+**v1.8.1**：采用正式月铃 Logo，以 GPL-3.0-only 开源。新增高密度滚动七日计划表、示例表教学与严格交互指引；保留主题日期 / 时间和确认弹层、可选后台守护；保留私有诊断日志与手动 ZIP 导出；支持进度恢复和重温的交互式新手教学；可见发送状态、保留图片上下文、先给方案后确认；支持课时表、单双周、本地脚本和到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
 
 ## 已实现
 
@@ -141,7 +141,7 @@ Android 12 华为 CET-AL00：退到后台并锁屏后，15:21:28 振动、15:22:
 
 ```powershell
 .\gradlew.bat --project-cache-dir Temp/gradle-project :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-adb install -r Release/v1.8.0/Silora-v1.8.0-debug.apk
+adb install -r Release/v1.8.1/Silora-v1.8.1-debug.apk
 adb shell am start -n com.silora.app/.MainActivity
 ```
 
@@ -251,7 +251,7 @@ Android 12+ 需要精确闹钟授权，Android 14 新装应用常默认无此授
 
 外部修改检测依赖实际模式与应用预期模式比较。进程不在时无法持续检测，更不能可靠识别是谁改的；若模式改动后又回到相同值，可能无法观察到。AI 网络失败不会影响已保存计划。网络失败不自动重发收费请求，避免重复消耗，可手动重试。
 
-APK 大小通过 `Get-Item Release/v1.8.0/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。
+APK 大小通过 `Get-Item Release/v1.8.1/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。
 
 ## 开源许可
 
@@ -268,3 +268,7 @@ Silora（静律）以 GNU GPL v3.0（GPL-3.0-only）发布，详见 [LICENSE](LI
 验证：45 项 JVM 测试通过；Android 12 真机通过 9 项更新交互检查并查看截图。网络请求不占用计划调度或 AI 工作线程，限制连接 / 读取超时和清单大小，下载链接再次由原生校验。
 
 原生真机清单解析验证通过（有效清单、错误应用名、错误版本、错误下载域名）。仓库线上清单已核对可访问；本轮手机网络访问更新源失败，因此真机成功联网检查仍待可访问 GitHub 的网络验证，失败反馈与重试入口已验证。
+
+### v1.8.1 品牌显示修复
+
+首页、教程欢迎页和设置关于页统一加载正式月铃图片，与桌面图标一致。切换深浅主题不再把 Logo 替换为月亮或花朵字符。
