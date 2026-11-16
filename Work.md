@@ -1,3 +1,7 @@
+## 自动更新：v1.8.0
+
+启动后台检查、设置手动检查、主题新版提示及仓库根目录 update.json 已接入。遵循 CPVC 清单字段，采用 Silora 独立 GitHub 地址；下载需用户确认，不自动安装。
+
 ## 正式品牌与开源发布：v1.7.1
 
 月铃原图作为正式 Logo 与 Android 应用图标。项目采用 GPL-3.0-only，公开仓库为 https://github.com/YCTS-otree/Silora 。本版本保留 v1.7.0 的功能与交互。

@@ -79,6 +79,17 @@ class MainActivity : Activity() {
                             finally { DeepSeek.busy.set(false) }
                             runOnUiThread { if(!isDestroyed)reply.postMessage(response.toString()) }
                         }
+                    } else if(action=="update_check") {
+                        val id = requestId
+                        UpdateChecker.executor.execute {
+                            val data = UpdateChecker.check(request.optBoolean("manual", false))
+                            runOnUiThread { if(!isDestroyed) reply.postMessage(JSONObject().put("requestId",id).put("ok",true).put("data",data).toString()) }
+                        }
+                    } else if(action=="update_open") {
+                        val url = request.getString("url")
+                        require(UpdateChecker.safePage(url)) { "无效的更新下载地址" }
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
+                        reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
                     } else if(action=="guard_set") {
                         val enabled = request.get("enabled"); require(enabled is Boolean)
                         GuardService.setEnabled(this, enabled)

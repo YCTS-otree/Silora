@@ -6,8 +6,8 @@ android {
         applicationId = "com.silora.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.7.1"
+        versionCode = 12
+        versionName = "1.8.0"
         manifestPlaceholders["appLabel"] = "静律"
         testInstrumentationRunner = providers.gradleProperty("testRunner").getOrElse("com.silora.app.NativeChecks")
     }

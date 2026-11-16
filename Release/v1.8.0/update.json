@@ -1,0 +1,13 @@
+{
+  "app": "Silora",
+  "latest": "1.8.0",
+  "published": "2026-11-16",
+  "notes": [
+    "启动时自动检查更新，设置中可手动检查。",
+    "采用主题更新提示，展示版本、发布日期及更新内容。"
+  ],
+  "download_pages": [
+    "https://github.com/YCTS-otree/Silora/tree/main/Release/v1.8.0"
+  ],
+  "min_supported": "1.0.0"
+}

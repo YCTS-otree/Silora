@@ -2,7 +2,7 @@
 
 # Silora · 静律
 
-**v1.7.1**：采用正式月铃 Logo，以 GPL-3.0-only 开源。新增高密度滚动七日计划表、示例表教学与严格交互指引；保留主题日期 / 时间和确认弹层、可选后台守护；保留私有诊断日志与手动 ZIP 导出；支持进度恢复和重温的交互式新手教学；可见发送状态、保留图片上下文、先给方案后确认；支持课时表、单双周、本地脚本和到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
+**v1.8.0**：采用正式月铃 Logo，以 GPL-3.0-only 开源。新增高密度滚动七日计划表、示例表教学与严格交互指引；保留主题日期 / 时间和确认弹层、可选后台守护；保留私有诊断日志与手动 ZIP 导出；支持进度恢复和重温的交互式新手教学；可见发送状态、保留图片上下文、先给方案后确认；支持课时表、单双周、本地脚本和到期提醒。系统 WebView UI，蓝色夜空 / 绿色自然主题。无需自建服务器；已保存计划离线运行。
 
 ## 已实现
 
@@ -141,7 +141,7 @@ Android 12 华为 CET-AL00：退到后台并锁屏后，15:21:28 振动、15:22:
 
 ```powershell
 .\gradlew.bat --project-cache-dir Temp/gradle-project :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-adb install -r Release/v1.7.1/Silora-v1.7.1-debug.apk
+adb install -r Release/v1.8.0/Silora-v1.8.0-debug.apk
 adb shell am start -n com.silora.app/.MainActivity
 ```
 
@@ -251,10 +251,18 @@ Android 12+ 需要精确闹钟授权，Android 14 新装应用常默认无此授
 
 外部修改检测依赖实际模式与应用预期模式比较。进程不在时无法持续检测，更不能可靠识别是谁改的；若模式改动后又回到相同值，可能无法观察到。AI 网络失败不会影响已保存计划。网络失败不自动重发收费请求，避免重复消耗，可手动重试。
 
-APK 大小通过 `Get-Item Release/v1.7.1/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。
+APK 大小通过 `Get-Item Release/v1.8.0/*.apk` 检查；前后台内存通过 `adb shell dumpsys meminfo com.silora.app` 比较；调度可检查 `adb shell dumpsys alarm`。日志仅按应用进程查看，不记录 API Key、Authorization 头或原始网络错误正文。
 
 ## 开源许可
 
 Silora（静律）以 GNU GPL v3.0（GPL-3.0-only）发布，详见 [LICENSE](LICENSE)。月铃图为正式 Logo。第三方组件保留各自许可。
 
 公开仓库：https://github.com/YCTS-otree/Silora
+
+## 自动更新检查（v1.8.0）
+
+沿用 CPVC 的清单约定，启动后在独立线程读取仓库根目录 `update.json`，每个应用进程自动检查一次；设置 → 软件更新可手动重试。只有更高的三段版本号才提示更新，教程、AI 发送或其他弹窗期间延后提示。检查失败不主动弹窗，在设置显示重试提示。点击“前往下载”打开 GitHub，用户自行下载和安装，不自动安装 APK。
+
+清单地址：`https://raw.githubusercontent.com/YCTS-otree/Silora/main/update.json`。维护 `app`（固定 Silora）、`latest`、`published`、`notes` 和 `download_pages`；下载页必须为本仓库 HTTPS 地址。以后先上传对应版本安装包，再更新清单。当前下载页指向仓库 Release/v1.8.0 目录，尚未创建 GitHub Release。`min_supported` 仅保留兼容字段，不用于强制更新。仅使用已存在的 GitHub 源，不配置不存在的 Gitee 镜像。
+
+验证：45 项 JVM 测试通过；Android 12 真机通过 9 项更新交互检查并查看截图。网络请求不占用计划调度或 AI 工作线程，限制连接 / 读取超时和清单大小，下载链接再次由原生校验。
