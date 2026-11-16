@@ -266,3 +266,5 @@ Silora（静律）以 GNU GPL v3.0（GPL-3.0-only）发布，详见 [LICENSE](LI
 清单地址：`https://raw.githubusercontent.com/YCTS-otree/Silora/main/update.json`。维护 `app`（固定 Silora）、`latest`、`published`、`notes` 和 `download_pages`；下载页必须为本仓库 HTTPS 地址。以后先上传对应版本安装包，再更新清单。当前下载页指向仓库 Release/v1.8.0 目录，尚未创建 GitHub Release。`min_supported` 仅保留兼容字段，不用于强制更新。仅使用已存在的 GitHub 源，不配置不存在的 Gitee 镜像。
 
 验证：45 项 JVM 测试通过；Android 12 真机通过 9 项更新交互检查并查看截图。网络请求不占用计划调度或 AI 工作线程，限制连接 / 读取超时和清单大小，下载链接再次由原生校验。
+
+原生真机清单解析验证通过（有效清单、错误应用名、错误版本、错误下载域名）。仓库线上清单已核对可访问；本轮手机网络访问更新源失败，因此真机成功联网检查仍待可访问 GitHub 的网络验证，失败反馈与重试入口已验证。
