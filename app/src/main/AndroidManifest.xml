@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <application android:name=".SiloraApplication" android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@drawable/silora_logo" android:label="${appLabel}" android:theme="@style/AppTheme" android:usesCleartextTraffic="false" android:supportsRtl="true">
         <service android:name=".GuardService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-enabled ongoing ringer schedule protection with visible notification and stop action; supplements exact alarms and observes ringer changes without wake locks."/>
@@ -19,6 +20,7 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"/>
                 <action android:name="android.app.action.NOTIFICATION_POLICY_ACCESS_GRANTED_CHANGED"/>
+                <action android:name="android.app.action.INTERRUPTION_FILTER_CHANGED"/>
             </intent-filter>
         </receiver>
         <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|uiMode" android:windowSoftInputMode="adjustResize">

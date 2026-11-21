@@ -27,6 +27,7 @@
         });
     }
     function highlight(next) {
+        const group=next?.closest("details.setting-group"); if(group)group.open=true;
         const changed = target !== next; if (changed) target?.classList.remove('tour-target'); target = next; target?.classList.add('tour-target');
         if (changed && target && !target.closest('nav') && !target.closest('#plans')) {
             const rect = target.getBoundingClientRect(), viewport = main.getBoundingClientRect();

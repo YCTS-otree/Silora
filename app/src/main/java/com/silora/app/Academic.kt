@@ -10,7 +10,7 @@ import java.time.temporal.TemporalAdjusters
 data class Period(val number: Int, val start: LocalTime, val end: LocalTime)
 data class PeriodTable(val name: String, val zone: String, val periods: List<Period>)
 data class WeekEntry(val weekday: Int, val weeks: String, val start: LocalTime,
-                     val end: LocalTime, val mode: Int, val label: String)
+                     val end: LocalTime, val mode: Int, val label: String, val location: String = "", val noticeMinutes: Int = 0, val locationShort: String = "")
 data class WeekCycle(val id: String, val name: String, val anchor: LocalDate,
                      val from: LocalDate, val until: LocalDate, val zone: String,
                      val entries: List<WeekEntry>)
@@ -60,7 +60,7 @@ object AcademicRules {
                     }
                     plans.add(Plan("cycle_${cycle.id}_${date.toString().replace("-", "")}_$index",
                         start.atZone(zone).toInstant().toEpochMilli(), end.atZone(zone).toInstant().toEpochMilli(),
-                        entry.mode, entry.label))
+                        entry.mode, entry.label, location=entry.location, noticeMinutes=entry.noticeMinutes,locationShort=entry.locationShort))
                 }
             }
             date = date.plusDays(1)

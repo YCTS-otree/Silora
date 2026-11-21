@@ -19,3 +19,8 @@ body.tour-running.viewing-week .tour-coach{padding:6px 14px 10px}body.tour-runni
 
 
 .week-card.compact strong{-webkit-line-clamp:1}
+.week-room{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.week-card.compact.has-room small:not(.week-room){display:none}
+.week-card.tiny.has-room{flex-direction:row;align-items:center;justify-content:flex-start}
+.week-card.tiny.has-room strong{width:auto;flex:1;min-width:0}
+.week-card.tiny.has-room .week-room{display:block;width:auto;max-width:52%}

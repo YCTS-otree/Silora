@@ -16,6 +16,7 @@ import java.util.concurrent.Executors
 class Core private constructor(private val context: Context) {
     val store=PlanStore(context)
     val reminders = RenewalReminders(context, store)
+    private val advanceNotices = AdvanceNotices(context, store)
     private val audio=context.getSystemService(AudioManager::class.java)
     private val alarms=context.getSystemService(AlarmManager::class.java)
     private val notifications=context.getSystemService(NotificationManager::class.java)
@@ -38,6 +39,16 @@ class Core private constructor(private val context: Context) {
         }
         if(alarmToken!=null) store.put("alarm","")
         val plans=store.plans(); val now=System.currentTimeMillis(); val active=PlanRules.active(plans,now)
+        advanceNotices.sync(plans, now, exact())
+        // Public ringerMode may reflect the DND overlay. Never capture it as a baseline.
+        if (notifications.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL) {
+            store.put("issue", "系统勿扰中：暂停铃声修改，解除后重新计算计划")
+            schedule(plans, now)
+            reminders.reschedule(plans, now)
+            GuardService.boundary(store.get("next").toLongOrNull())
+            AppLog.record("reconcile deferred_dnd")
+            return
+        }
         val old=store.state(); val actual=audio.ringerMode
         val restore=store.get("restore","previous");val manual=store.get("manual","respect")
         val inputState=if(old.session && old.activeId!=null && active!=null && !PlanRules.connected(plans,old.activeId,active.id)) {
@@ -113,6 +124,7 @@ class Core private constructor(private val context: Context) {
         .put("events",store.events()).put("version",BuildConfig.VERSION_NAME).put("apiConfigured",KeyVault(context).configured())
         .put("logging", AppLog.snapshot())
         .put("guard", GuardService.snapshot(context))
+        .put("advanceImportance",if(notifications.areNotificationsEnabled()) notifications.getNotificationChannel(AdvanceNotices.CHANNEL)?.importance ?: 0 else 0)
         .put("tutorial", TutorialState(context).snapshot())
         .put("reasoningEffort", AiConfig.effort(context))
         .put("periodTable", store.get("periodTable").takeIf { it.isNotBlank() }?.let { JSONObject(it) })
@@ -143,9 +155,16 @@ class Core private constructor(private val context: Context) {
 
     fun command(o: JSONObject): JSONObject {
         when(o.getString("action")) {
+            "notice_all" -> {
+                require(o.has("notice_minutes"))
+                val mins=PlanJson.minutes(o)
+                val now=System.currentTimeMillis()
+                store.replace(store.plans().map { if(it.start>now) it.copy(noticeMinutes=mins) else it },o.getLong("revision"))
+                reconcile("批量设置开始提醒")
+            }
             "tutorial_save" -> TutorialState(context).save(o)
             "proposal_apply" -> {
-                proposals().apply(o.getString("proposalId"))
+                proposals().apply(o.getString("proposalId"), if(o.has("notice_minutes")) PlanJson.minutes(o) else null)
                 reconcile("确认 AI 方案")
             }
             "proposal_clear" -> proposals().clear()

@@ -30,7 +30,7 @@ class SiloraApplication : Application() {
                 Core.executor.execute { try { Core.get(context).reconcile("系统铃声变化") } catch(e: Exception) { AppLog.exception("ringer_broadcast", e) } }
             }
         }
-        val filter=IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION)
+        val filter=IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION).apply { addAction(android.app.NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED) }
         if(Build.VERSION.SDK_INT>=33)registerReceiver(receiver,filter,Context.RECEIVER_NOT_EXPORTED) else registerReceiver(receiver,filter)
     }
 }

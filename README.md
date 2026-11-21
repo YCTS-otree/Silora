@@ -38,3 +38,7 @@ macOS 和 Linux 可运行 `./gradlew :app:assembleDebug`。构建产物位于 `T
 ## 许可证
 
 本项目以 [GPL-3.0-only](LICENSE) 发布。历史功能说明和测试记录见 [旧版 README](https://github.com/YCTS-otree/Silora/blob/6ea06233efe657f8802dc9d671e5407c58db7933/README.md)。
+
+### 正式版签名（v1.14.0 起）
+
+正式 APK 位于 Release/v版本/Silora-v版本.apk。使用 assembleRelease 构建，再通过 tools/sign-release.ps1 的 -UnsignedApk 和 -OutputApk 签名并验签。已有证书不要再次传 -CreateIdentity。签名库与受 Windows 当前用户 DPAPI 保护的口令保存在 %LOCALAPPDATA%/Silora/Signing，不纳入仓库。迁移开发机前请妥善备份密钥及可恢复的凭据；仅复制 DPAPI 文件不能在其他用户账户解密。发布证书 SHA-256：ac971fa856a78829718dc79b87172fb3953e78189d5e292fb2d563ddad8ac17a。

@@ -28,7 +28,9 @@ class MainActivity : Activity() {
         createWebView()
     }
     private fun createWebView() {
+        val gallery=ChatGallery(applicationContext)
         val loader = WebViewAssetLoader.Builder()
+            .addPathHandler("/chat-images/") { gallery.resource(it) }
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this)).build()
         web = WebView(this)
         web.webChromeClient = object:android.webkit.WebChromeClient() {
@@ -41,6 +43,9 @@ class MainActivity : Activity() {
         }
         web.settings.apply {
             javaScriptEnabled = true
+            setSupportZoom(false)
+            builtInZoomControls = false
+            displayZoomControls = false
             domStorageEnabled = true
             allowFileAccess = false
             allowContentAccess = false
@@ -63,6 +68,14 @@ class MainActivity : Activity() {
                     } else if(action=="support_bilibili") {
                         startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://space.bilibili.com/668497683")))
                         reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
+                    } else if(action=="gallery_save") {
+                        val id=request.getString("imageId")
+                        val response=JSONObject().put("requestId",requestId)
+                        Thread {
+                            try { gallery.save(id);response.put("ok",true).put("data",JSONObject()) }
+                            catch(e:Exception){ response.put("ok",false).put("error","未能保存图片，请检查图片是否仍在本机及可用空间。") }
+                            runOnUiThread { if(!isDestroyed)reply.postMessage(response.toString()) }
+                        }.start()
                     } else if(action=="ai_cancel") {
                         DeepSeek.get(this).cancel()
                         AppLog.operation(action, true)
@@ -76,7 +89,10 @@ class MainActivity : Activity() {
                             catch(e:Exception) { DeepSeek.busy.set(false);imageReply=null;throw IllegalStateException("系统文件选择器不可用") }
                         } else DeepSeek.executor.execute {
                             val response=JSONObject().put("requestId",requestId)
-                            try { response.put("ok",true).put("data",DeepSeek.get(this).command(request) { phase ->
+                            try { response.put("ok",true).put("data",DeepSeek.get(this).command(request, preview={ thought, summary ->
+                                runOnUiThread { if(!isDestroyed) reply.postMessage(JSONObject().put("requestId",requestId)
+                                    .put("preview",JSONObject().put("thought",thought).put("summary",summary)).toString()) }
+                            }) { phase ->
                                 if(action == "ai_chat") runOnUiThread {
                                     val safePhase = phase.takeIf { it in setOf("preparing", "sending", "waiting", "receiving", "validating") } ?: "unknown"
                                     AppLog.record("ai_progress phase=$safePhase")
@@ -115,6 +131,15 @@ class MainActivity : Activity() {
                             .setType("application/zip").putExtra(Intent.EXTRA_TITLE, AppLog.exportName()), 5003)
                         logPickerOpen = true
                         AppLog.record("log_export choosing_destination")
+                        reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
+                    } else if(action=="about_open") {
+                        val url=when(request.getString("kind")){
+                            "site" -> "https://silora.ycts.top"
+                            "github" -> "https://github.com/YCTS-otree/Silora"
+                            "gitee" -> "https://gitee.com/otreee/Silora"
+                            else -> error("未知链接")
+                        }
+                        startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
                         reply.postMessage(JSONObject().put("requestId",requestId).put("ok",true).put("data",JSONObject()).toString())
                     } else if(action=="open_api_help") {
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://api-docs.deepseek.com/zh-cn/")).addCategory(Intent.CATEGORY_BROWSABLE))
@@ -166,6 +191,7 @@ class MainActivity : Activity() {
     @Deprecated("Framework picker callback")
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?) {
         super.onActivityResult(requestCode,resultCode,data)
+        if (requestCode == 5010) { permissionGuide.onSettingsResult(); return }
         if (requestCode == 5003) {
             logPickerOpen = false
             val uri = data?.data

@@ -1,14 +1,16 @@
 {
   "app": "Silora",
-  "latest": "1.8.1",
-  "published": "2026-11-16",
+  "latest": "1.14.0",
+  "published": "2026-11-21",
   "notes": [
-    "修复首页和教程仍显示旧符号的问题，统一使用正式月铃 Logo。",
-    "设置关于页增加正式 Logo，深浅主题保持同一品牌图像。",
-    "接入 YCTS 启动与日活统计，补充数据说明；统计失败不影响本地计划。"
+    "正式签名已变更：旧调试版不能直接覆盖安装，请先备份计划，不要直接卸载。",
+    "新增课程与会议开始前提醒和地点，支持 AI 配置；改进后台守护、勿扰保护及权限引导。",
+    "聊天支持流式回复、历史分页和图片查看；设置页精简，关于页新增官网、协议与开源链接。"
   ],
   "download_pages": [
-    "https://github.com/YCTS-otree/Silora/tree/main/Release/v1.8.1"
+    "https://github.com/YCTS-otree/Silora/tree/main/Release/v1.14.0",
+    "https://github.com/YCTS-otree/Silora/releases/tag/v1.14.0",
+    "https://gitee.com/otreee/Silora/releases/tag/v1.14.0"
   ],
   "min_supported": "1.0.0"
 }

@@ -75,6 +75,8 @@
         const content = $('plan-detail-body'); content.replaceChildren();
         const format = value => new Date(value).toLocaleString('zh-CN', { hour12:false, month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit', year:'numeric' });
         content.append(el('p', `开始 · ${format(plan.start)}`), el('p', `结束 · ${format(plan.end)}`), el('p', `状态 · ${status(plan)}`), el('p', `时区 · ${state?.zone || Intl.DateTimeFormat().resolvedOptions().timeZone}`));
+        if(plan.location) content.append(el('p','地点 · '+plan.location));
+        if(!demo) content.append(el('p',plan.notice_minutes?'提醒 · 提前 '+plan.notice_minutes+' 分钟':'提醒 · 未开启'));
         $('plan-detail-hint').textContent = demo ? '示例不会执行。点卡片或上方模糊空白处收起，即可下一步。' : '点卡片或上方模糊空白处收起';
         const actions = $('plan-detail-actions'); actions.replaceChildren(); actions.hidden = demo;
         if (!demo) {
@@ -96,7 +98,7 @@
         if (!rows.length) { toast('这一天没有安排'); return; }
         selected = null; $('plan-detail-title').textContent = `${localDate(dayAfter(week,day))} · ${weekday(dayAfter(week,day))}`; $('plan-detail-mode').textContent = `${rows.length} 项`;
         $('plan-detail-body').replaceChildren(...rows.map(s => {
-            const button = el('button',`${clock(s.start)}–${clock(s.end)} · ${s.plan.label} · ${names[s.plan.mode]}`,'day-agenda-item');
+            const button = el('button',`${clock(s.start)}–${clock(s.end)} · ${s.plan.label}${s.plan.location?" · "+s.plan.location:""} · ${names[s.plan.mode]}`,'day-agenda-item');
             button.onclick = event => { event.stopPropagation(); openDetail(s.plan); }; return button;
         }));
         $('plan-detail-actions').replaceChildren(); $('plan-detail-actions').hidden = true;
@@ -128,9 +130,16 @@
             card.classList.toggle('tiny',cardHeight < 26);
             card.classList.toggle('compact',cardHeight < 44);
             card.classList.toggle('disabled',!plan.enabled); card.classList.toggle('active-plan',!demo && state?.activeId===plan.id);
-            card.setAttribute('aria-label',`${localDate(dayAfter(week,day))} ${plan.label}，${clock(item.start)}至${clock(item.end)}，${names[plan.mode]}，${status(plan)}，点击展开`);
+            card.setAttribute('aria-label',`${localDate(dayAfter(week,day))} ${plan.label}，${clock(item.start)}至${clock(item.end)}，${names[plan.mode]}${plan.location?"，地点 "+plan.location:""}，${status(plan)}，点击展开`);
             card.setAttribute('aria-expanded',String(detail.open && selected?.id===plan.id));
             card.append(el('strong',(item.before?'↳ ':'')+plan.label+(item.after?' ↴':'')),el('small',`${clock(item.start)}`));
+            if(plan.location){
+                const full=plan.location.trim();
+                const code=full.match(/(?:[东南西北]|[A-Za-z])\s*[-－–]\s*\d+[A-Za-z]?|\d+[号室房]/g)?.pop();
+                const short=plan.location_short || code || (Array.from(full).length>8?Array.from(full).slice(0,7).join('')+'…':full);
+                const room=el('small',short,'week-room');room.title=plan.location;
+                card.append(room);card.classList.add('has-room');
+            }
             card.onclick = () => openDetail(plan); grid.append(card);
         }
         document.dispatchEvent(new Event('week-layout'));

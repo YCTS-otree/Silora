@@ -12,3 +12,25 @@
 
 /* Keep the official artwork identical across themes and preserve its square ratio. */
 .brand-image{display:block;object-fit:contain;aspect-ratio:1/1;padding:0;flex-shrink:0}.orb.brand-image{border-radius:20px;border:0;background:transparent}.tour-emblem.brand-image{border-radius:18px;border:0;background:transparent}.about-logo{margin:0 0 12px;border-radius:12px}
+#stream-preview{min-width:0;max-width:100%;padding:0 1rem .55rem}
+#stream-thought{min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;opacity:.75;font-size:.85rem;line-height:1.5}
+#stream-answer{margin:.3rem 0;white-space:pre-wrap;overflow-wrap:anywhere}
+#thinking-row:not([hidden]){display:flex;align-items:baseline;gap:.4em}
+#thinking-row>span:first-child{flex:none;font-weight:600}
+#stream-thought{flex:1;color:#68717c;opacity:1}
+[data-theme=dark] #stream-thought{color:#a2aaba}
+.gallery-toggle{display:block;width:100%;border:0;padding:0;background:none;color:inherit;text-align:inherit;font:inherit;white-space:pre-wrap}
+.gallery-toggle small{display:block;margin-top:.35rem;opacity:.75}
+.gallery-grid:not([hidden]){display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
+.gallery-thumb{padding:0;border:0;overflow:hidden;max-width:100%;border-radius:.5rem}
+.gallery-thumb img{display:block;max-width:min(24vw,110px);max-height:80px;width:auto;height:auto}
+#chat-photo[open]{box-sizing:border-box;position:fixed;inset:0;margin:0;width:100%;height:100%;max-width:none;max-height:none;padding:0;border:0;border-radius:0;background:#080a0e;color:white;display:flex;flex-direction:column}
+.photo-bar{display:flex;align-items:center;justify-content:space-between;padding:.65rem}
+#photo-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+#photo-full{display:block;max-width:100%;max-height:100%;width:auto;height:auto;user-select:none}
+#photo-note{margin:0;text-align:center}#photo-note:not(:empty){padding:.55rem}
+.setting-group{margin:.55rem 0;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.setting-group>summary{cursor:pointer;font-weight:600;padding:.85rem 1rem}
+.setting-group>h3{font-size:.94rem;margin:.6rem 1rem .2rem}
+.setting-group>.card{border:0;margin:.25rem .45rem .5rem;padding:.65rem;background:transparent}
+#terms-dialog article{line-height:1.65}#terms-dialog article h3{font-size:1rem}

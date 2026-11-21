@@ -28,7 +28,10 @@ function field(label, type, value, key) {
     input.type = type;
     input.value = value ?? '';
     input.dataset.key = key;
-    input.required = true;
+    input.required = !['location','location_short','notice_minutes'].includes(key);
+    if(key==='notice_minutes'){input.min='0';input.max='1440';input.step='1';}
+    if(key==='location_short')input.maxLength=16;
+    if(key==='location')input.maxLength=160;
     wrap.append(input);
     return wrap;
 }
@@ -110,6 +113,7 @@ function addRule(entry = {}) {
     const times = el('div', undefined, 'time-row');
     times.append(field('开始', 'time', entry.start, 'start'), field('结束', 'time', entry.end, 'end'));
     row.append(line, times, choice('模式', 'mode', Object.entries(names), entry.mode || 'vibrate'));
+    row.append(field('地点（选填）','text',entry.location,'location'),field('地点简称','text',entry.location_short,'location_short'),field('提前提醒（分钟，0 为关闭）','number',entry.notice_minutes,'notice_minutes'));
     const remove = el('button', '移除此规则');
     remove.type = 'button'; remove.onclick = () => { row.remove(); invalidateAutomation(); };
     row.append(remove);
@@ -131,6 +135,7 @@ window.openAutomation = (candidate = null) => {
     $('automation-from').value = rule?.valid_from || today();
     $('automation-until').value = rule?.valid_until || '';
     $('automation-zone').value = rule?.time_zone || state.zone;
+    $('script-short').value=rule?.location_short||'';$('script-notice').value=rule?.notice_minutes||'';$('script-location').value=rule?.location||'';
     $('automation-source').value = rule?.source || '';
     $('automation-rows').replaceChildren();
     for (const entry of rule?.entries || [{}]) addRule(entry);
@@ -143,10 +148,10 @@ async function previewAutomation() {
     try {
         const rule = { name: $('automation-name').value.trim(), anchor_monday: $('automation-anchor').value,
             valid_from: $('automation-from').value, valid_until: $('automation-until').value, time_zone: $('automation-zone').value.trim() };
-        if ($('automation-kind').value === 'script') rule.source = $('automation-source').value;
+        if ($('automation-kind').value === 'script') { rule.source = $('automation-source').value;rule.notice_minutes=Number($('script-notice').value);rule.location=$('script-location').value;rule.location_short=$('script-short').value; }
         else rule.entries = [...$('automation-rows').children].map(row => {
             const get = key => row.querySelector(`[data-key="${key}"]`).value;
-            return { weekday: Number(get('weekday')), weeks: get('weeks'), start: get('start'), end: get('end'), mode: get('mode'), label: get('label').trim() };
+            return { weekday: Number(get('weekday')), weeks: get('weeks'), start: get('start'), end: get('end'), mode: get('mode'), label: get('label').trim(), location:get('location').trim(),location_short:get('location_short').trim(), notice_minutes:Number(get('notice_minutes')) };
         });
         const r = await native('automation_preview', { rule });
         automationDraft = r.rule; automationRevision = r.revision;

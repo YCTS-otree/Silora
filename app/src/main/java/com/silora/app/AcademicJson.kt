@@ -43,7 +43,7 @@ object AcademicJson {
             LocalDate.parse(text(o, "valid_until")), text(o, "time_zone"),
             (0 until array.length()).map { i -> array.getJSONObject(i).let {
                 WeekEntry(integer(it, "weekday"), text(it, "weeks"), time(it, "start"), time(it, "end"),
-                    PlanJson.mode(text(it, "mode")), text(it, "label"))
+                    PlanJson.mode(text(it, "mode")), text(it, "label"),PlanJson.location(it),PlanJson.minutes(it,PlanJson.minutes(o)),PlanJson.short(it))
             } })
     }
     fun cycleJson(cycle: WeekCycle): JSONObject = JSONObject().put("id", cycle.id).put("name", cycle.name)
@@ -51,7 +51,7 @@ object AcademicJson {
         .put("valid_until", cycle.until.toString()).put("time_zone", cycle.zone)
         .put("entries", JSONArray().apply { cycle.entries.forEach {
             put(JSONObject().put("weekday", it.weekday).put("weeks", it.weeks).put("start", it.start.toString())
-                .put("end", it.end.toString()).put("mode", PlanJson.name(it.mode)).put("label", it.label))
+                .put("end", it.end.toString()).put("mode", PlanJson.name(it.mode)).put("label", it.label).put("location",it.location).put("location_short",it.locationShort).put("notice_minutes",it.noticeMinutes))
         } })
     fun automation(o: JSONObject, previousId: String? = null): Pair<JSONObject, List<Plan>> {
         if (!o.has("source")) {
@@ -68,6 +68,6 @@ object AcademicJson {
         val normalized = JSONObject().put("kind", "script").put("id", program.id).put("name", program.name)
             .put("anchor_monday", program.anchor.toString()).put("valid_from", program.from.toString())
             .put("valid_until", program.until.toString()).put("time_zone", program.zone).put("source", program.source)
-        return normalized to ScheduleScript.expand(program, rules)
+        return normalized.put("notice_minutes",PlanJson.minutes(o)).put("location",PlanJson.location(o)).put("location_short",PlanJson.short(o)) to ScheduleScript.expand(program, rules).map { it.copy(noticeMinutes=PlanJson.minutes(o), location=PlanJson.location(o),locationShort=PlanJson.short(o)) }
     }
 }

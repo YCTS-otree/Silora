@@ -3,7 +3,7 @@ package com.silora.app
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
-data class Plan(val id: String, val start: Long, val end: Long, val mode: Int, val label: String, val enabled: Boolean = true)
+data class Plan(val id: String, val start: Long, val end: Long, val mode: Int, val label: String, val enabled: Boolean = true, val location: String = "", val noticeMinutes: Int = 0, val locationShort: String = "")
 
 object PlanRules {
     fun instant(text: String): Long = try {
@@ -18,6 +18,8 @@ object PlanRules {
         plans.forEach {
             require(it.id.matches(Regex("[a-zA-Z0-9_-]{1,80}"))) { "无效计划 ID" }
             require(it.start < it.end && it.end - it.start <= 366L * 86400000) { "时间范围无效或超过一年" }
+            require(it.locationShort.length<=16 && (it.locationShort.isBlank() || it.location.isNotBlank())) { "卡片简称最多 16 个字符，且须提供完整地点" }
+            require(it.location.length <= 160 && it.noticeMinutes in 0..1440) { "地点最多 160 字；提醒提前量须为 0–1440 分钟" }
             require(it.mode in 0..2) { "无效铃声模式" }
             require(it.label.isNotBlank() && it.label.length <= 120) { "名称不能为空或超过 120 字" }
         }

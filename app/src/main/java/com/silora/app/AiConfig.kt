@@ -16,6 +16,6 @@ object AiConfig {
         require(effort in efforts) { "无效的思考强度" }
         return JSONObject().put("model", "deepseek-flash").put("messages", messages)
             .put("thinking", JSONObject().put("type", "enabled")).put("reasoning_effort", effort)
-            .put("response_format", JSONObject().put("type", "json_object")).put("max_tokens", 32768).put("stream", false)
+            .put("response_format", JSONObject().put("type", "json_object")).put("max_tokens", 32768).put("stream", true)
     }
 }

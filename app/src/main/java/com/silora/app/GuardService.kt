@@ -23,11 +23,11 @@ class GuardService : Service() {
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(NotificationChannel(CHANNEL, "后台守护", NotificationManager.IMPORTANCE_LOW))
             val open = PendingIntent.getActivity(this, 31, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            val stop = PendingIntent.getService(this, 32, Intent(this, GuardService::class.java).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val stop = PendingIntent.getActivity(this, 32, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val notification = Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("静律 · 后台守护已开启").setContentText("帮助计划在后台执行，点击打开静律")
                 .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
-                .addAction(Notification.Action.Builder(null, "关闭守护", stop).build()).build()
+                .addAction(Notification.Action.Builder(null, "管理守护", stop).build()).build()
             if (Build.VERSION.SDK_INT >= 34) startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             else startForeground(ID, notification)
             running = true; issue = ""
@@ -39,8 +39,8 @@ class GuardService : Service() {
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == STOP) {
-            prefs(this).edit().putBoolean("enabled", false).commit()
-            AppLog.record("guard_stopped_by_user")
+            // Legacy notification action must not bypass the UI confirmations.
+            return START_STICKY
         }
         if (!enabled(this) || !running) { stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); return START_NOT_STICKY }
         Core.executor.execute {
@@ -61,7 +61,7 @@ class GuardService : Service() {
     }
     override fun onBind(intent: Intent?) = null
     companion object {
-        private const val CHANNEL = "background_guard"
+        internal const val CHANNEL = "background_guard"
         private const val ID = 1300
         private const val STOP = "com.silora.app.STOP_GUARD"
         @Volatile private var instance: GuardService? = null
@@ -69,7 +69,9 @@ class GuardService : Service() {
         @Volatile private var starting = false
         @Volatile private var issue = ""
         private fun prefs(context: Context) = context.getSharedPreferences("guard", Context.MODE_PRIVATE)
-        fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
+        fun isRunning() = running
+        fun isStarting() = starting
+        fun enabled(context: Context) = prefs(context).getBoolean("enabled", true)
         fun setEnabled(context: Context, value: Boolean) {
             check(prefs(context).edit().putBoolean("enabled", value).commit())
             if (value) ensureStarted(context) else {

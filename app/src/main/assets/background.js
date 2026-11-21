@@ -10,7 +10,14 @@
     };
     $('guard-enabled').onchange = async event => {
         const input = event.target; input.disabled = true;
-        try { await native('guard_set', { enabled: input.checked }); await refresh(); setTimeout(refresh, 600); }
+        try {
+            const enabled = input.checked;
+            if (!enabled) {
+                input.checked = true;
+                if (!await askConfirm('关闭后，系统可能延迟或阻止后台切换铃声。是否继续？', {title:'关闭后台守护（1/2）',confirmLabel:'继续关闭',cancelLabel:'保持开启'})) return;
+                if (!await askConfirm('确认关闭后台守护？计划仍会保留，但后台执行可靠性可能降低。', {title:'最后确认（2/2）',confirmLabel:'确认关闭',cancelLabel:'保持开启'})) return;
+            }
+            await native('guard_set', { enabled }); await refresh(); setTimeout(refresh, 600); }
         catch (e) { toast(e.message); await refresh(); }
         finally { input.disabled = false; }
     };
