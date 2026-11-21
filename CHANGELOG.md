@@ -261,3 +261,8 @@
 ### Notes
 - GitHub 与 Gitee 已分别上传新版 APK 和 SHA256SUMS.txt；GitHub 在线摘要匹配 dac1b7067b06d38877ecd21111c02cbb07171ce9e09869ee11288a21d129baa7。
 - GitHub 原附件改名 previous 保留；两边 v1.8.1 标签保留首次快照，新包源码为 4f26447，发布说明明确区分。源码已推送 GitHub main，Gitee 继续使用原有自动同步。
+
+## v1.8.1 - 2026-11-21
+
+### Notes
+- 重写 GitHub 首页说明，补充 APK 下载、首次授权、数据使用和源码构建指引。
