@@ -39,7 +39,7 @@
   function render() {
     const data = cache?.data;
     const fresh = cache && !cache.failed && Date.now() - cache.checkedAt < HOUR;
-    document.getElementById('release-version').textContent = data ? `${fresh ? '最新版本' : '上次获取'} v${data.latest}` : '随页版本 v1.14.0';
+    document.getElementById('release-version').textContent = data ? `${fresh ? '最新版本' : '上次获取'} v${data.latest}` : '随页版本 v1.14.1';
     document.getElementById('release-status').textContent = data ? `${data.published ? data.published + ' · ' : ''}${cache.source}${fresh ? ' · 每小时自动检查' : ' · 暂未连接更新源'}` : '暂未连接更新源，可直接前往发布页';
     const list = document.getElementById('release-notes');
     list.replaceChildren();

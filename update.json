@@ -1,16 +1,16 @@
 {
   "app": "Silora",
-  "latest": "1.14.0",
-  "published": "2026-11-21",
+  "latest": "1.14.1",
+  "published": "2026-11-23",
   "notes": [
-    "正式签名已变更：旧调试版不能直接覆盖安装，请先备份计划，不要直接卸载。",
-    "新增课程与会议开始前提醒和地点，支持 AI 配置；改进后台守护、勿扰保护及权限引导。",
-    "聊天支持流式回复、历史分页和图片查看；设置页精简，关于页新增官网、协议与开源链接。"
+    "AI 生成课表后再次读取原图，逐项核对课程、时间和地点。",
+    "方案未指定提醒时默认提前 10 分钟，可修改，设为 0 可关闭。",
+    "首次权限教程及权限面板增加电池优化豁免说明和申请入口。"
   ],
   "download_pages": [
-    "https://github.com/YCTS-otree/Silora/tree/main/Release/v1.14.0",
-    "https://github.com/YCTS-otree/Silora/releases/tag/v1.14.0",
-    "https://gitee.com/otreee/Silora/releases/tag/v1.14.0"
+    "https://github.com/YCTS-otree/Silora/tree/main/Release/v1.14.1",
+    "https://github.com/YCTS-otree/Silora/releases/tag/v1.14.1",
+    "https://gitee.com/otreee/Silora/releases/tag/v1.14.1"
   ],
   "min_supported": "1.0.0"
 }
