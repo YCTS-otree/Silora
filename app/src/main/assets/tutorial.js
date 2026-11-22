@@ -118,7 +118,7 @@
         } else if (step === 5) {
             next = tab === 'settings' ? $('permission-panel') : document.querySelector('[data-tab="settings"]');
             if (tab !== 'settings') $('tour-next').textContent = '↓ 点击「设置」';
-            if (tab === 'settings') $('tour-copy').textContent = '精确闹钟用于按时调度，通知策略访问用于铃声切换；通知权限用于到期提醒。缺少时点对应按钮前往系统授权，返回后会重新检查。';
+            if (tab === 'settings') $('tour-copy').textContent = '精确闹钟用于按时调度，通知策略访问用于铃声切换；通知权限用于课程和到期提醒，电池优化豁免可减少熄屏后的执行延迟。缺少时点对应按钮前往系统授权，返回后会重新检查。';
         } else if (step === 6) {
             next = tab === 'settings' ? $('execution-settings') : document.querySelector('[data-tab="settings"]');
             $('tour-next').disabled = saving || tab !== 'settings';

@@ -153,7 +153,27 @@ class DeepSeek private constructor(private val context: Context) {
         images.forEach { blocks.put(JSONObject().put("type","image_url").put("image_url",JSONObject().put("url","data:image/png;base64,"+Base64.encodeToString(it.bytes,Base64.NO_WRAP)).put("detail","high"))) }
         messages.put(JSONObject().put("role","user").put("content",blocks))
         progress?.invoke("sending")
-        val response=request("/chat/completions",vault.read(),AiConfig.request(messages, AiConfig.effort(context)), preview, progress)
+        val hasPictures = (0 until messages.length()).any { index ->
+            val parts = messages.getJSONObject(index).optJSONArray("content")
+            parts != null && (0 until parts.length()).any { parts.optJSONObject(it)?.optString("type") == "image_url" }
+        }
+        val effort = AiConfig.effort(context)
+        var response = request("/chat/completions", vault.read(), AiConfig.request(messages, effort),
+            if (hasPictures) { thinking, _ -> preview(thinking, "") } else preview, progress)
+        if (hasPictures) {
+            val first = response.getJSONArray("choices").getJSONObject(0)
+            require(first.getString("finish_reason") == "stop") { "图片初读未完成，请重试" }
+            val draft = first.getJSONObject("message").getString("content")
+            val initialUsage = response.optJSONObject("usage")?.optInt("total_tokens") ?: 0
+            messages.put(JSONObject().put("role","user").put("content",
+                "请重新读取以上原图，逐格对照日期、节次、起止时间、课程、地点和遗漏项。优先查证用户指出的错误。以下初稿仅供比对；直接返回核实并修正后的完整协议 JSON。读不清的具体项标明待核对，切勿猜测。\n初稿：$draft"))
+            progress?.invoke("reviewing")
+            response = request("/chat/completions", vault.read(), AiConfig.request(messages, effort),
+                { thinking, _ -> preview(thinking, "") })
+            val usage = response.optJSONObject("usage") ?: JSONObject()
+            usage.put("total_tokens", initialUsage + usage.optInt("total_tokens"))
+            response.put("usage", usage)
+        }
         val choice=response.getJSONArray("choices").getJSONObject(0)
         require(choice.getString("finish_reason")=="stop") { "AI 输出不完整，请缩小日期范围后重试" }
         val content=choice.getJSONObject("message").getString("content")

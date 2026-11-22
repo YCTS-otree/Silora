@@ -4,7 +4,7 @@ let attachedImages = [];
 let progressTimer = null, progressStart = 0, progressPhase = 'preparing';
 const progressLabels = {
     preparing: '正在整理文字和图片', sending: '正在发送到 DeepSeek',
-    waiting: '消息已发出，等待 AI 思考与回复', receiving: '正在接收 AI 回复', validating: '正在核对日期、课程和时间冲突'
+    waiting: '消息已发出，等待 AI 思考与回复', receiving: '正在接收 AI 回复', reviewing: '正在重读原图，逐项核对安排', validating: '正在核对日期、课程和时间冲突'
 };
 function paintProgress() {
     const box = $('ai-progress');
@@ -64,8 +64,8 @@ function renderProposal(proposal) {
     if (d.period_table) card.append(el('p', `确认时同时保存作息：${d.period_table.name}（${d.period_table.periods.length} 节）。`));
     if (d.restore) card.append(el('p', '区间结束后：' + ({ ring: '响铃', vibrate: '振动', previous: '恢复原模式', keep: '保持当前模式' }[d.restore])));
     if(proposal.askNotice && times.length){
-        const label=el('label','要在课程或会议开始前提醒吗？希望提前多久？');
-        const input=document.createElement('input');input.type='number';input.id='proposal-notice';input.min='0';input.max='1440';input.step='1';input.placeholder='输入提前分钟数，如 10；留空不提醒';
+        const label=el('label','开始前提醒（分钟，0 为关闭）');
+        const input=document.createElement('input');input.type='number';input.id='proposal-notice';input.min='0';input.max='1440';input.step='1';input.value='10';input.required=true;
         label.append(input);card.append(label);
     } else if(times.length){
         const values=new Set(times.map(p=>p.notice_minutes||0));
@@ -75,7 +75,7 @@ function renderProposal(proposal) {
     if(d.status==='location_ready') detail.open=true;
     detail.append(el('summary', '查看全部时间明细'));
     detail.append(el('p', times.map(p => `${format(p.start)} — ${format(p.end)} · ${p.label} · ${names[p.mode]}${p.location?" · "+p.location:""}${p.notice_minutes?" · 提前 "+p.notice_minutes+" 分钟":""}`).join('\n'), 'proposal-text'));
-    card.append(detail, el('p', proposal.askNotice ? '填入分钟数后确认即可启用提醒；留空确认只保存安排。也可以回复“提前 10 分钟提醒”。' : '回复“是”或点击下方按钮即可应用；也可以直接说要改哪里。'));
+    card.append(detail, el('p', proposal.askNotice ? '默认提前 10 分钟提醒，可修改后确认。' : '回复“是”或点击下方按钮即可应用；也可以直接说要改哪里。'));
     const apply = el('button', '是，按此执行', 'primary'); apply.id = 'proposal-apply';
     apply.onclick = () => confirmProposal(proposal.id);
     card.append(apply);
